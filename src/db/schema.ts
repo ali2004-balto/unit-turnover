@@ -288,6 +288,36 @@ export const notifications = pgTable(
   ],
 );
 
+/** Manager passwords (argon2id). Assignees never have one; they sign in with links. */
+export const credentials = pgTable("credentials", {
+  personId: uuid("person_id")
+    .primaryKey()
+    .references(() => people.id, { onDelete: "cascade" }),
+  passwordHash: text("password_hash").notNull(),
+  failedAttempts: integer("failed_attempts").notNull().default(0),
+  lockedUntil: ts("locked_until"),
+  updatedAt: updatedAt(),
+});
+
+export const sessionKind = pgEnum("session_kind", ["password", "link"]);
+
+/** Signed-in browsers. Only a hash of the cookie's token is stored. */
+export const sessions = pgTable(
+  "sessions",
+  {
+    id: text("id").primaryKey(),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id, { onDelete: "cascade" }),
+    kind: sessionKind("kind").notNull(),
+    createdAt: createdAt(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    userAgent: text("user_agent"),
+  },
+  (t) => [index("sessions_person").on(t.personId)],
+);
+
 /** Commands already applied, so a double-tap on a slow connection applies once. */
 export const processedRequests = pgTable("processed_requests", {
   requestId: text("request_id").primaryKey(),

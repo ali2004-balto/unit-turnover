@@ -8,7 +8,7 @@
 import "./env";
 import { migrateDatabase, openDatabase } from "@/db/client";
 import { seedBase } from "@/db/seed/base";
-import { isEmpty, seedDemo } from "@/db/seed/demo";
+import { DEMO_LOGIN, isEmpty, seedDemo } from "@/db/seed/demo";
 
 async function main() {
   const handle = await openDatabase();
@@ -18,6 +18,7 @@ async function main() {
       if (handle.kind === "pglite") {
         const { today } = await seedDemo(handle.db);
         console.log(`Loaded demo data (dates relative to ${today}).`);
+        console.log(`Sign in as ${DEMO_LOGIN.email} with the password ${DEMO_LOGIN.password}`);
       } else {
         await seedBase(handle.db);
         console.log("Database ready: settings, the default workflow and your properties are in place.");

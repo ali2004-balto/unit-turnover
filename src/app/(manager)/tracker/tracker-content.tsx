@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { FlagPill, STATUS_STYLES, StatusPill } from "@/components/status";
+import { CrewTable, PipelineTable } from "@/components/summary-tables";
 import { isDateOnly } from "@/domain/dates";
 import { stageLabel } from "@/domain/derived";
 import { STATUS_LABELS } from "@/domain/status";
@@ -8,6 +9,7 @@ import { type Summary, summarize } from "@/domain/summary";
 import type { StepState } from "@/domain/workflow/types";
 import { formatAverage, formatBooking, formatDate, formatDays } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { requireManager } from "@/server/auth/current";
 import { getDb } from "@/server/db";
 import { checkSheetSnapshot, type SheetCheck } from "@/server/queries/sheet-check";
 import { listTurnovers, type PersonSummary, type TurnoverView } from "@/server/queries/turnovers";
@@ -19,6 +21,7 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 export async function TrackerContent({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
+  await requireManager("/tracker");
   await connection();
   const asOf = typeof params.asOf === "string" && isDateOnly(params.asOf) ? params.asOf : undefined;
 
@@ -178,66 +181,10 @@ function SummaryCards({ summary, dueSoonDays }: { summary: Summary; dueSoonDays:
         </table>
       </Card>
       <Card title="Pipeline by stage">
-        <table className="w-full text-sm">
-          <thead className="text-xs text-muted-foreground">
-            <tr>
-              <th className="pb-1 text-left font-medium">Stage</th>
-              <th className="pb-1 text-right font-medium">Units now</th>
-              <th className="pb-1 text-right font-medium">Avg days in stage</th>
-              <th className="pb-1 text-right font-medium">Longest</th>
-            </tr>
-          </thead>
-          <tbody>
-            {summary.pipeline.map((p) => (
-              <tr key={p.stage} className="border-t border-border">
-                <th scope="row" className="py-1.5 pr-2 text-left font-normal">
-                  {p.stage}
-                </th>
-                <td className="py-1.5 text-right tabular-nums">{p.unitsNow}</td>
-                <td className="py-1.5 text-right tabular-nums">{formatAverage(p.avgDaysInStage)}</td>
-                <td className="py-1.5 text-right tabular-nums">{formatAverage(p.longestInStage)}</td>
-              </tr>
-            ))}
-            <tr className="border-t border-border font-medium">
-              <th scope="row" className="py-1.5 text-left">
-                Total active
-              </th>
-              <td className="py-1.5 text-right tabular-nums">{summary.totalActive}</td>
-              <td colSpan={2} />
-            </tr>
-          </tbody>
-        </table>
+        <PipelineTable summary={summary} />
       </Card>
       <Card title="In-house crew workload">
-        {summary.crew.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No in-house employees yet.</p>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="text-xs text-muted-foreground">
-              <tr>
-                <th className="pb-1 text-left font-medium">Employee</th>
-                <th className="pb-1 text-right font-medium">Open jobs</th>
-                <th className="pb-1 text-right font-medium">In progress</th>
-                <th className="pb-1 text-right font-medium">Completed (all time)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {summary.crew.map((c) => (
-                <tr key={c.name} className="border-t border-border">
-                  <th scope="row" className="py-1.5 text-left font-normal">
-                    {c.name}
-                  </th>
-                  <td className="py-1.5 text-right tabular-nums">{c.openJobs}</td>
-                  <td className="py-1.5 text-right tabular-nums">{c.inProgress}</td>
-                  <td className="py-1.5 text-right tabular-nums">{c.completedAllTime}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-        <p className="mt-3 text-xs text-muted-foreground">
-          Open jobs = assigned to the employee and the in-house work step is not Done or N/A.
-        </p>
+        <CrewTable summary={summary} />
       </Card>
     </section>
   );

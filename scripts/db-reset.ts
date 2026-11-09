@@ -8,7 +8,7 @@ import "./env";
 import { rm } from "node:fs/promises";
 import { databaseConfig, migrateDatabase, openDatabase } from "@/db/client";
 import { seedBase } from "@/db/seed/base";
-import { seedDemo } from "@/db/seed/demo";
+import { DEMO_LOGIN, seedDemo } from "@/db/seed/demo";
 
 async function main() {
   const config = databaseConfig();
@@ -26,6 +26,7 @@ async function main() {
     } else {
       const { today } = await seedDemo(handle.db);
       console.log(`Local database reset with demo data (dates relative to ${today}).`);
+      console.log(`Sign in as ${DEMO_LOGIN.email} with the password ${DEMO_LOGIN.password}`);
     }
   } finally {
     await handle.close();

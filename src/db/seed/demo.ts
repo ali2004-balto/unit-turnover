@@ -9,12 +9,16 @@ import { eq } from "drizzle-orm";
 import { addDays, type DateOnly, dateInZone, formatShort } from "@/domain/dates";
 import type { Actor, Role, StepState } from "@/domain/workflow/types";
 import { splitScope } from "@/import/master-tracker";
+import { setPassword } from "@/server/auth/sessions";
 import { loadTurnover } from "@/server/turnover-store";
 import { createTurnover, runCommand } from "@/server/workflow";
 import type { DB } from "../client";
 import { people, propertyStepDefaults } from "../schema";
 import { getSettings } from "../settings";
 import { seedBase } from "./base";
+
+/** Demo sign-in for the local demo data only. Real managers are added with `npm run admin:create`. */
+export const DEMO_LOGIN = { email: "manager@example.com", password: "turnover-demo" } as const;
 
 export const DEMO_PEOPLE: Array<{ key: string; name: string; role: Role; phone: string; email: string; company?: string }> = [
   { key: "manager", name: "Manager", role: "admin", phone: "+16045550100", email: "manager@example.com" },
@@ -294,6 +298,7 @@ export async function seedDemo(db: DB, opts: { today?: DateOnly } = {}): Promise
     rolesById.set(row.id, p.role);
   }
   const person = (key: string) => peopleIds.get(key)!;
+  await setPassword(db, person("manager"), DEMO_LOGIN.password);
 
   for (const [name, propertyId] of propertyIds) {
     const byStep: Record<string, string> = {

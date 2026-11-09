@@ -19,3 +19,24 @@ export function formatBooking(on: DateOnly | null, time: string | null): string 
   if (!on) return "";
   return time ? `${formatShort(on)}, ${time}` : formatShort(on);
 }
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "Nov 14" */
+export function formatMonthDay(date: DateOnly | null): string {
+  if (!date) return "";
+  const [, m, d] = date.split("-").map(Number);
+  return `${MONTHS[m - 1]} ${d}`;
+}
+
+/** "Nov 14, 2026, 9:05 a.m." in the business time zone. */
+export function formatDateTime(instant: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(instant);
+}
