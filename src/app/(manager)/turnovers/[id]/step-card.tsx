@@ -3,7 +3,14 @@ import { StatusPill } from "@/components/status";
 import { isFinished } from "@/domain/status";
 import { formatBooking, formatMonthDay } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { type GridItem, PhotoGrid } from "@/components/photos/photo-grid";
+import { PhotoUploader } from "@/components/photos/photo-uploader";
+import { SignInLinkButton } from "@/components/sign-in-link-button";
 import type { StepDetail, TurnoverDetail } from "@/server/queries/turnover-detail";
+
+function gridItems(files: TurnoverDetail["attachments"]): GridItem[] {
+  return files.map((a) => ({ id: a.id, kind: a.kind, fileName: a.fileName, url: a.url, caption: a.caption, canRemove: true }));
+}
 import { Checklist } from "./checklist";
 import { ReassignSelect } from "./reassign-select";
 import { StepActions } from "./step-actions";
@@ -11,10 +18,16 @@ import { StepActions } from "./step-actions";
 export function StepCard({
   detail,
   people,
+  turnoverId,
+  findings,
+  attachments,
 }: {
   detail: StepDetail;
   people: TurnoverDetail["people"];
   today: string;
+  turnoverId: string;
+  findings: TurnoverDetail["findings"];
+  attachments: TurnoverDetail["attachments"];
 }) {
   const { step, active, ready, upcomingBooking, late, bookingPassed, sendBackTargets, openItems } = detail;
   const finished = isFinished(step.status);
@@ -26,6 +39,7 @@ export function StepCard({
     .map((p) => ({ id: p.id, name: p.name }));
 
   const state = finished ? null : active ? "Their turn now" : upcomingBooking ? "Booked ahead" : "Waiting for earlier steps";
+  const stepFiles = attachments.filter((a) => a.stepId === step.id && !a.findingId);
 
   return (
     <article
@@ -86,6 +100,35 @@ export function StepCard({
           </p>
         ) : null}
 
+        {active && step.assigneeId ? (
+          <SignInLinkButton
+            personId={step.assigneeId}
+            personName={people.find((p) => p.id === step.assigneeId)?.name ?? "them"}
+            stepId={step.id}
+            label={`Sign-in link for ${people.find((p) => p.id === step.assigneeId)?.name ?? "them"}`}
+          />
+        ) : null}
+
+        {step.kind === "inspection" && findings.length > 0 ? (
+          <div className="space-y-2">
+            <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Findings · {findings.length}</span>
+            <ul className="space-y-2">
+              {findings.map((f) => (
+                <li key={f.id} className="rounded-md border border-border p-2">
+                  <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">{f.room}</p>
+                  <p>
+                    {f.description}{" "}
+                    <span className={cn("rounded px-1.5 py-0.5 text-[11px]", f.needsWork ? "bg-st-progress-bg text-st-progress-fg" : "bg-st-na-bg text-st-na-fg")}>
+                      {f.needsWork ? "Needs work" : "Note"}
+                    </span>
+                  </p>
+                  <PhotoGrid as="manager" items={gridItems(attachments.filter((a) => a.findingId === f.id))} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
         <Checklist
           stepId={step.id}
           kind={step.kind}
@@ -95,6 +138,16 @@ export function StepCard({
           canTick={ready && !finished}
           collapsed={finished || !ready}
         />
+
+        {stepFiles.length > 0 || active ? (
+          <div className="space-y-2">
+            {stepFiles.length > 0 ? (
+              <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Photos and files · {stepFiles.length}</span>
+            ) : null}
+            <PhotoGrid as="manager" items={gridItems(stepFiles)} />
+            {active ? <PhotoUploader as="manager" turnoverId={turnoverId} stepId={step.id} size="md" fullQuality={step.key === "photos"} /> : null}
+          </div>
+        ) : null}
 
         {!finished ? (
           <StepActions

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { z } from "zod";
+import { AutoRefresh } from "@/components/auto-refresh";
 import { FlagPill } from "@/components/status";
 import { Card, CardHeader } from "@/components/ui/card";
 import { formatDateTime, formatMonthDay } from "@/lib/format";
@@ -37,6 +38,7 @@ export async function TurnoverContent({ params }: { params: Promise<{ id: string
 
   return (
     <TurnoverProvider turnoverId={t.id} version={t.version}>
+      <AutoRefresh seconds={15} />
       <Link href="/" className="mb-3 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="size-4" aria-hidden /> Dashboard
       </Link>
@@ -75,7 +77,15 @@ export async function TurnoverContent({ params }: { params: Promise<{ id: string
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_22rem]">
         <section aria-label="Steps" className="space-y-3">
           {detail.steps.map((s) => (
-            <StepCard key={s.step.id} detail={s} people={detail.people} today={detail.today} />
+            <StepCard
+              key={s.step.id}
+              detail={s}
+              people={detail.people}
+              today={detail.today}
+              turnoverId={t.id}
+              findings={detail.findings.filter((f) => f.stepId === s.step.id)}
+              attachments={detail.attachments}
+            />
           ))}
           <p className="pt-1 text-xs text-muted-foreground">
             Workflow: {detail.templateName}. Created {formatDateTime(detail.createdAt, detail.settings.timezone)}

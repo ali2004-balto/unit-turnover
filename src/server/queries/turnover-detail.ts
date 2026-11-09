@@ -8,6 +8,8 @@ import { isFinished } from "@/domain/status";
 import { describeEvents, type TimelineEntry } from "@/domain/workflow/describe";
 import { isStepActive, isStepReady, isStepUpcomingBooking, turnoverDerivedInput } from "@/domain/workflow/engine";
 import type { Role, StepState, TurnoverState } from "@/domain/workflow/types";
+import { type Attachment, listAttachments } from "../files/attachments";
+import { type Finding, listFindings } from "../findings";
 import { loadTurnover } from "../turnover-store";
 
 export interface StepDetail {
@@ -38,6 +40,8 @@ export interface TurnoverDetail {
   steps: StepDetail[];
   people: Array<{ id: string; name: string; roles: Role[]; active: boolean }>;
   timeline: TimelineEntry[];
+  findings: Array<Finding & { stepId: string }>;
+  attachments: Attachment[];
 }
 
 export async function getTurnoverDetail(ex: Executor, id: string): Promise<TurnoverDetail | null> {
@@ -69,6 +73,13 @@ export async function getTurnoverDetail(ex: Executor, id: string): Promise<Turno
       .limit(500),
   ]);
 
+  const [findings, files] = await Promise.all([
+    listFindings(
+      ex,
+      turnover.steps.filter((s) => s.kind === "inspection").map((s) => s.id),
+    ),
+    listAttachments(ex, id),
+  ]);
   const names = new Map(personRows.map((p) => [p.id, p.name]));
   const input = turnoverDerivedInput(turnover);
   const derived = derive(input, today, settings.dueSoonDays);
@@ -105,5 +116,7 @@ export async function getTurnoverDetail(ex: Executor, id: string): Promise<Turno
     steps,
     people: personRows.sort((a, b) => a.name.localeCompare(b.name)),
     timeline: describeEvents(eventRows, (pid) => (pid ? (names.get(pid) ?? null) : null)),
+    findings,
+    attachments: files,
   };
 }

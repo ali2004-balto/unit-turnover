@@ -10,7 +10,7 @@ import { getDb } from "@/server/db";
 import { buildDashboard, parseFilters } from "@/server/queries/dashboard";
 import { listTurnovers } from "@/server/queries/turnovers";
 import { loadTemplate } from "@/server/workflow";
-import { AutoRefresh } from "./auto-refresh";
+import { AutoRefresh } from "@/components/auto-refresh";
 import { BoardView } from "./board-view";
 import { Filters } from "./filters";
 import { KpiTiles } from "./kpi-tiles";
