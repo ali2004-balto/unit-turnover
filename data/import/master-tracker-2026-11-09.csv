@@ -1,0 +1,24 @@
+UNIT TURNOVER MASTER TRACKER,,,,"How it works: type in the white cells. Grey cells calculate themselves. Pick every Status from its dropdown and, when a step is done, enter the date (Ctrl + ; stamps today). Full guide on the Setup tab.",,,,,,,,,,,,,,,,,,
+UNIT,,,,AUTO-CALCULATED (don't type here),,,,STEP 1: INSPECTION,,STEP 2: WHAT'S REQUIRED,,,STEP 3: IN-HOUSE WORK (OUR EMPLOYEES),,,STEP 4: CLEANING,,STEP 5: PHOTOS,,STEP 6: UPLOAD TO LEASING,,NOTES
+Property,Unit,Move-out date,Target ready date,Current stage,Days vacant,Days in stage,Flag,Inspection status,Inspection date,Scope status,Scope date,Scope of work (what's required),Work status,Work date,Assigned to (employee),Cleaning status,Cleaning date,Photos status,Photos date,Leasing status,Leasing date,Notes / blockers
+,,,,,,,,,,,,,,,,,,,,,,
+Acadian,203,,,3. In-house work,,,No target date,Done,2026-11-06,Done,,Junk removal; touch up paint,Not started,,,Not started,,Not started,,Not started,,
+,,,,,,,,,,,,,,,,,,,,,,
+Parkdale,405,,,5. Photos,,,No target date,Done,2026-11-05,Done,,New light switch covers; touch up paint where required; stain bedroom door; sand and repaint vanity cupboards (to confirm); patio door repair (replace if needed); replace light bulbs (fixtures if needed),Done,,,Done,,Scheduled,,Not started,,Vanity cupboards sand and repaint to be confirmed. Photos scheduled
+Arbor,201,,,3. In-house work,,,No target date,Done,,Done,,Junk removal; paint; touch ups,Not started,,,Not started,,Not started,,Not started,,
+Pioneer,202B,,,3. In-house work,,,No target date,Done,,Done,,Basic touch ups,In progress,,,Not started,,Not started,,Not started,,
+Courts,26,,,Complete,,,Complete,Done,,Done,,,Done,,,Done,,Done,,Done,,All steps complete
+,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,
+Rivergate,305,,,1. Inspection,,,No target date,In progress,,Not started,,,Not started,,,Not started,,Not started,,Not started,,Awaiting inspection results
+Rivergate,303,,,1. Inspection,,,No target date,In progress,,Not started,,,Not started,,,Not started,,Not started,,Not started,,Awaiting inspection results
+WR,315,,,3. In-house work,,,No target date,Done,,Done,,"3 doors, 1 drawer, new stove",In progress,,,Not started,,Not started,,Not started,,
+Balwin,1,,,4. Cleaning,,,No target date,Done,,Done,,,Done,,,Scheduled,,Scheduled,,Not started,,Cleaning scheduled Sun Nov 8; photos scheduled Sat Nov 14
+Balwin,2,,,4. Cleaning,,,No target date,Done,,Done,,,Done,,,Scheduled,,Scheduled,,Not started,,Cleaning scheduled Sun Nov 8; photos scheduled Sat Nov 14
+Balwin,3,,,4. Cleaning,,,No target date,Done,,Done,,,Done,,,Scheduled,,Scheduled,,Not started,,Cleaning scheduled Sun Nov 8; photos scheduled Sat Nov 14
+Balwin,4,,,4. Cleaning,,,No target date,Done,,Done,,,Done,,,Scheduled,,Scheduled,,Not started,,Cleaning scheduled Sun Nov 8; photos scheduled Sat Nov 14
+Balwin,5,,,4. Cleaning,,,No target date,Done,,Done,,,Done,,,Scheduled,,Scheduled,,Not started,,Cleaning scheduled Sun Nov 8; photos scheduled Sat Nov 14
+Balwin,6,,,4. Cleaning,,,No target date,Done,,Done,,,Done,,,Scheduled,,Scheduled,,Not started,,Cleaning scheduled Sun Nov 8; photos scheduled Sat Nov 14
+Grandview,102,,,4. Cleaning,,,No target date,Done,,Done,,,Done,,,Not started,,Not started,,Not started,,Cleaning and photos not scheduled yet
+Grandview,105,,,3. In-house work,,,No target date,Done,,Done,,Replace 1 window,Not started,,,Not started,,Not started,,Not started,,Cleaning and photos not scheduled yet
+Grandview,302,,,4. Cleaning,,,No target date,Done,,Done,,,Done,,,Not started,,Not started,,Not started,,Cleaning and photos not scheduled yet

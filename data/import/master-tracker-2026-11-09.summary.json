@@ -1,0 +1,26 @@
+{
+  "_about": "Values shown on the Summary and Setup tabs of Unit_Turnover_Master_Tracker on 2026-11-09, read alongside master-tracker-2026-11-09.csv. Used to check the app's Summary numbers against the sheet's.",
+  "exportedOn": "2026-11-09",
+  "dueSoonDays": 3,
+  "properties": ["Acadian", "Arbor", "Courts", "Grandview", "Oakwood", "Parkdale", "Pioneer", "Rivergate", "WR", "Balwin"],
+  "inHouseEmployees": [],
+  "summary": {
+    "activeTurns": 16,
+    "overdue": 0,
+    "dueSoon": 0,
+    "blocked": 0,
+    "completedAllTime": 1,
+    "avgDaysVacantActive": null,
+    "avgDaysToComplete": null,
+    "missingMoveOut": 17,
+    "pipeline": [
+      { "stage": "1. Inspection", "unitsNow": 2, "avgDaysInStage": null, "longestInStage": null },
+      { "stage": "2. Scope of work", "unitsNow": 0, "avgDaysInStage": null, "longestInStage": null },
+      { "stage": "3. In-house work", "unitsNow": 5, "avgDaysInStage": null, "longestInStage": null },
+      { "stage": "4. Cleaning", "unitsNow": 8, "avgDaysInStage": null, "longestInStage": null },
+      { "stage": "5. Photos", "unitsNow": 1, "avgDaysInStage": null, "longestInStage": null },
+      { "stage": "6. Leasing upload", "unitsNow": 0, "avgDaysInStage": null, "longestInStage": null }
+    ],
+    "totalActive": 16
+  }
+}
