@@ -11,6 +11,7 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import type { ExtractTablesWithRelations } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
+import { claimDatabase } from "./dev-lock";
 import * as schema from "./schema";
 
 export type Schema = typeof schema;
@@ -43,10 +44,21 @@ export function databaseConfig(env: NodeJS.ProcessEnv = process.env): DatabaseCo
 export async function openPglite(dataDir: string | null): Promise<DbHandle> {
   const { PGlite } = await import("@electric-sql/pglite");
   const { drizzle } = await import("drizzle-orm/pglite");
-  if (dataDir) await mkdir(dataDir, { recursive: true });
+  let release = () => {};
+  if (dataDir) {
+    await mkdir(dataDir, { recursive: true });
+    release = claimDatabase(dataDir);
+  }
   const client = dataDir ? new PGlite(dataDir) : new PGlite();
   const db = drizzle(client, { schema }) as unknown as DB;
-  return { db, kind: "pglite", close: () => client.close() };
+  return {
+    db,
+    kind: "pglite",
+    close: async () => {
+      await client.close();
+      release();
+    },
+  };
 }
 
 export async function openPostgres(url: string): Promise<DbHandle> {

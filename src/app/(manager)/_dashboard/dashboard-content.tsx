@@ -37,13 +37,20 @@ export async function DashboardContent({ searchParams }: { searchParams: SearchP
   const dashboard = buildDashboard(list, steps, filters);
   const view = params.view === "list" ? "list" : "board";
   const query = new URLSearchParams(
-    Object.entries(params).flatMap(([k, v]) => (typeof v === "string" && k !== "view" ? [[k, v]] : [])),
+    Object.entries(params).flatMap(([k, v]) => (typeof v === "string" && k !== "view" && k !== "created" ? [[k, v]] : [])),
   ).toString();
   const filtered = Object.values(filters).some(Boolean);
+
+  const created = typeof params.created === "string" ? Number(params.created) : 0;
 
   return (
     <div className="space-y-5">
       <AutoRefresh seconds={15} />
+      {created > 0 ? (
+        <p role="status" className="rounded-lg border border-st-done-fg/30 bg-st-done-bg px-4 py-2.5 text-sm text-st-done-fg">
+          Created {created} turnover{created === 1 ? "" : "s"}. Each first step&apos;s person has been notified.
+        </p>
+      ) : null}
       <KpiTiles summary={dashboard.summary} dueSoonDays={dashboard.dueSoonDays} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">

@@ -119,7 +119,7 @@ export interface CreateTurnoverInput {
   assignees?: Record<string, string | null>;
 }
 
-export async function createTurnover(db: DB, input: CreateTurnoverInput, opts: RunOptions): Promise<EngineResult> {
+export async function createTurnover(db: Executor, input: CreateTurnoverInput, opts: RunOptions): Promise<EngineResult> {
   return db.transaction(async (tx) => {
     const [property] = await tx.select().from(properties).where(eq(properties.id, input.propertyId));
     if (!property) throw new WorkflowError("NOT_FOUND", "That property doesn't exist.");

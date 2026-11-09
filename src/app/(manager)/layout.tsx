@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { NavLinks } from "./nav-links";
+import { NavLinks, NavLinksFallback } from "./nav-links";
 import { UserMenu } from "./user-menu";
 
 export default function ManagerLayout({ children }: LayoutProps<"/">) {
@@ -12,7 +12,9 @@ export default function ManagerLayout({ children }: LayoutProps<"/">) {
           <Link href="/" className="flex h-12 shrink-0 items-center font-semibold tracking-tight md:h-auto">
             Unit Turnover
           </Link>
-          <NavLinks />
+          <Suspense fallback={<NavLinksFallback />}>
+            <NavLinks />
+          </Suspense>
           <div className="ml-auto flex shrink-0 items-center gap-1 md:order-none">
             <ThemeToggle />
             <Suspense fallback={<div className="h-8 w-20 animate-pulse rounded-md bg-muted" />}>

@@ -7,6 +7,7 @@
 import "./env";
 import { rm } from "node:fs/promises";
 import { databaseConfig, migrateDatabase, openDatabase } from "@/db/client";
+import { claimDatabase } from "@/db/dev-lock";
 import { seedBase } from "@/db/seed/base";
 import { DEMO_LOGIN, seedDemo } from "@/db/seed/demo";
 
@@ -16,6 +17,8 @@ async function main() {
     console.error("db:reset only resets the local development database. DATABASE_URL is set, so nothing was changed.");
     process.exit(1);
   }
+  // Refuse while the app has the database open, rather than wiping it under its feet.
+  claimDatabase(config.dataDir)();
   await rm(config.dataDir, { recursive: true, force: true });
   const handle = await openDatabase(config);
   try {
@@ -34,6 +37,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error);
+  console.error(error instanceof Error ? error.message : error);
   process.exit(1);
 });

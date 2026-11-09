@@ -1,15 +1,16 @@
 "use client";
 
 import { X } from "lucide-react";
-import { createContext, use, useEffect, useRef, useState } from "react";
+import { createContext, use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button, type ButtonProps } from "./button";
 
 const DialogContext = createContext<{ close: () => void } | null>(null);
+const noop = () => {};
 
-/** Closes the dialog it's inside (e.g. after a form saves). */
+/** Closes the dialog it's inside (e.g. after a form saves). Stable across renders. */
 export function useCloseDialog(): () => void {
-  return use(DialogContext)?.close ?? (() => {});
+  return use(DialogContext)?.close ?? noop;
 }
 
 /**
@@ -33,6 +34,8 @@ export function Dialog({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(false);
+  const close = useCallback(() => setOpen(false), []);
+  const context = useMemo(() => ({ close }), [close]);
 
   useEffect(() => {
     const el = ref.current;
@@ -58,7 +61,7 @@ export function Dialog({
         )}
       >
         {open ? (
-          <DialogContext value={{ close: () => setOpen(false) }}>
+          <DialogContext value={context}>
             <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
               <div>
                 <h2 className="text-base font-semibold">{title}</h2>
