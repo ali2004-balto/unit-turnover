@@ -11,6 +11,7 @@ const SECTIONS = [
   { href: "/settings/defaults", label: "Default assignees" },
   { href: "/settings/templates", label: "Workflows" },
   { href: "/settings/messages", label: "Messages" },
+  { href: "/settings/sheet", label: "Google Sheet" },
 ];
 
 function Nav({ pathname }: { pathname: string | null }) {

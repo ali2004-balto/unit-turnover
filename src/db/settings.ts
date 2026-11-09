@@ -13,6 +13,7 @@ export const DEFAULT_SETTINGS: Omit<AppSettings, "updatedAt"> = {
   quietHoursEnd: "07:00",
   digestTime: "07:00",
   lastMorningRunOn: null,
+  sheetLinkToken: null,
 };
 
 export async function getSettings(ex: Executor): Promise<AppSettings> {

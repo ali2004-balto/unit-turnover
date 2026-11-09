@@ -61,7 +61,7 @@ export async function TrackerContent({ searchParams }: { searchParams: SearchPar
         <p className="rounded-lg border border-border bg-card px-4 py-3 text-sm">
           <strong className="font-semibold">Demo data.</strong> Your 17 units with their real statuses, scope and notes,
           but made-up dates and placeholder people (Inspector A, Crew A…), plus three Oakwood examples showing a block,
-          an N/A skip and a send-back.
+          an N/A skip and a send-back, and six months of made-up finished turns for the reports.
         </p>
       ) : null}
       <SheetCheckPanel check={checkSheetSnapshot()} />

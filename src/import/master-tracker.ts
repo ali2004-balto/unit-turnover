@@ -10,6 +10,7 @@ import Papa from "papaparse";
 import { type DateOnly, daysBetween, fromSheetSerial, isDateOnly, MONTHS_SHORT, weekday } from "@/domain/dates";
 import type { DerivedInput } from "@/domain/derived";
 import { statusFromSheet, type StepStatus } from "@/domain/status";
+import { unguardCell } from "@/lib/csv";
 
 export const SHEET_STEP_KEYS = ["inspection", "scope", "work", "cleaning", "photos", "leasing"] as const;
 export type SheetStepKey = (typeof SHEET_STEP_KEYS)[number];
@@ -200,7 +201,8 @@ export function parseMasterTrackerCsv(csv: string): ParseResult {
   for (let i = headerIndex + 1; i < grid.length; i++) {
     const cells = grid[i];
     const rowNumber = i + 1;
-    const cell = (f: Field) => (col[f] === -1 ? "" : (cells[col[f]] ?? "").trim());
+    // A file exported by the app guards text that looks like a formula with an apostrophe; drop it.
+    const cell = (f: Field) => (col[f] === -1 ? "" : unguardCell((cells[col[f]] ?? "").trim()));
     const property = cell("property");
     const unit = cell("unit");
     // The sheet ignores rows with no property and no unit.

@@ -1,0 +1,1 @@
+ALTER TABLE "app_settings" ADD COLUMN "sheet_link_token" text;

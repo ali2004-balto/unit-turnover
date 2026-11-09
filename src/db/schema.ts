@@ -51,6 +51,11 @@ export const appSettings = pgTable(
     digestTime: text("digest_time").notNull().default("07:00"),
     /** The last day the morning reminders were written, so they're written once a day. */
     lastMorningRunOn: day("last_morning_run_on"),
+    /**
+     * The secret in the Master Tracker's live link (for Google Sheets' IMPORTDATA).
+     * Kept as is so managers can copy the link again; null when it's turned off.
+     */
+    sheetLinkToken: text("sheet_link_token"),
     updatedAt: updatedAt(),
   },
   (t) => [check("app_settings_single_row", sql`${t.id} = 1`)],
