@@ -87,6 +87,65 @@ const balwin = (unit: string): DemoUnit => ({
   ],
 });
 
+/**
+ * About six months of finished turns (made up), so the reports have a history
+ * to show: in-house work is slower at Oakwood, Parkdale and WR, a few units are
+ * sent back from Photos, and most targets are 10 to 14 days. The same history
+ * every time, so tests and screenshots don't shift.
+ */
+function finishedHistory(): DemoUnit[] {
+  let seed = 7;
+  const rand = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
+  const between = (lo: number, hi: number) => lo + Math.floor(rand() * (hi - lo + 1));
+  const pick = <T,>(items: readonly T[]) => items[Math.floor(rand() * items.length)];
+  const slowerWork: Record<string, number> = { Oakwood: 3, Parkdale: 2, WR: 2 };
+  const units: Record<string, string[]> = {
+    Acadian: ["104", "110", "214"],
+    Arbor: ["103", "108", "205"],
+    Courts: ["12", "18", "31"],
+    Grandview: ["108", "204", "306"],
+    Oakwood: ["105", "208", "312"],
+    Parkdale: ["102", "210", "308"],
+    Pioneer: ["101A", "204B", "305A"],
+    Rivergate: ["101", "207", "311"],
+    WR: ["104", "210", "318"],
+    Balwin: ["8", "11", "14"],
+  };
+  const scopes = [
+    "Touch up paint; replace blinds",
+    "Patch and paint living room; new outlet covers",
+    "Replace bedroom carpet",
+    "Junk removal; touch up paint",
+    "Fix closet door; replace light bulbs",
+    "Repaint kitchen cabinets; new hardware",
+  ];
+  const properties = Object.keys(units);
+  const history: DemoUnit[] = [];
+  let moveOut = -200;
+  for (let i = 0; i < 24; i++) {
+    moveOut += between(5, 8);
+    const property = properties[i % properties.length];
+    const unit = units[property][Math.floor(i / properties.length)];
+    let d = moveOut;
+    const acts: Act[] = [];
+    acts.push({ do: "done", step: "inspection", day: (d += between(1, 2)) });
+    acts.push({ do: "done", step: "scope", day: (d += between(0, 1)) });
+    acts.push({ do: "done", step: "work", day: (d += between(2, 5) + (slowerWork[property] ?? 0)) });
+    acts.push({ do: "done", step: "cleaning", day: (d += between(1, 2)) });
+    if (i % 6 === 4) {
+      // Photos spots something: back to in-house work, then cleaning again.
+      acts.push({ do: "start", step: "photos", day: (d += 1) });
+      acts.push({ do: "sendBack", from: "photos", to: "work", day: d, reason: pick(["Paint drips on the trim", "Scuff on the hallway wall", "Missing outlet cover"]) });
+      acts.push({ do: "done", step: "work", day: (d += between(1, 2)) });
+      acts.push({ do: "done", step: "cleaning", day: (d += 1) });
+    }
+    acts.push({ do: "done", step: "photos", day: (d += between(1, 3)) });
+    acts.push({ do: "done", step: "leasing", day: (d += between(0, 1)) });
+    history.push({ property, unit, moveOut, target: moveOut + pick([10, 12, 14, 14]), scope: pick(scopes), fromSheet: false, acts });
+  }
+  return history;
+}
+
 export const DEMO_UNITS: DemoUnit[] = [
   {
     property: "Acadian",
@@ -269,6 +328,7 @@ export const DEMO_UNITS: DemoUnit[] = [
       { do: "start", step: "work", day: -1 },
     ],
   },
+  ...finishedHistory(),
 ];
 
 export interface DemoResult {

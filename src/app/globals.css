@@ -41,6 +41,23 @@
 
   --danger: #c00000;
   --warning: #9c5700;
+
+  /* Charts (reports). One accent hue for the series and the emphasis, a grey for
+     the rest, and a one-hue ramp for the heat table, low to high, each with the
+     text colour that reads best on it. */
+  --chart-accent: #2a78d6;
+  --chart-muted: #898781;
+  --chart-axis: #c9cdd4;
+  --heat-1: #cde2fb;
+  --heat-2: #9ec5f4;
+  --heat-3: #6da7ec;
+  --heat-4: #2a78d6;
+  --heat-5: #184f95;
+  --heat-ink-1: #0b0b0b;
+  --heat-ink-2: #0b0b0b;
+  --heat-ink-3: #0b0b0b;
+  --heat-ink-4: #ffffff;
+  --heat-ink-5: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -76,6 +93,19 @@
 
     --danger: #ff6b6b;
     --warning: #f2cd6a;
+
+    --chart-accent: #3987e5;
+    --chart-axis: #3a404a;
+    --heat-1: #104281;
+    --heat-2: #1c5cab;
+    --heat-3: #2a78d6;
+    --heat-4: #6da7ec;
+    --heat-5: #b7d3f6;
+    --heat-ink-1: #ffffff;
+    --heat-ink-2: #ffffff;
+    --heat-ink-3: #ffffff;
+    --heat-ink-4: #0b0b0b;
+    --heat-ink-5: #0b0b0b;
   }
 }
 
@@ -108,6 +138,19 @@
   --fl-notarget-fg: #9aa1ad;
   --danger: #ff6b6b;
   --warning: #f2cd6a;
+
+  --chart-accent: #3987e5;
+  --chart-axis: #3a404a;
+  --heat-1: #104281;
+  --heat-2: #1c5cab;
+  --heat-3: #2a78d6;
+  --heat-4: #6da7ec;
+  --heat-5: #b7d3f6;
+  --heat-ink-1: #ffffff;
+  --heat-ink-2: #ffffff;
+  --heat-ink-3: #ffffff;
+  --heat-ink-4: #0b0b0b;
+  --heat-ink-5: #0b0b0b;
 }
 
 @theme inline {
@@ -122,6 +165,9 @@
   --color-ring: var(--ring);
   --color-danger: var(--danger);
   --color-warning: var(--warning);
+  --color-chart-accent: var(--chart-accent);
+  --color-chart-muted: var(--chart-muted);
+  --color-chart-axis: var(--chart-axis);
 
   --color-st-done-bg: var(--st-done-bg);
   --color-st-done-fg: var(--st-done-fg);

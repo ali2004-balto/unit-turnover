@@ -28,7 +28,7 @@ const find = (property: string, unit: string) =>
   list.rows.find((r) => r.propertyName === property && r.turnover.unit === unit)!;
 
 describe("demo data", () => {
-  it("has your 17 units plus 3 Oakwood examples", () => {
+  it("has your 17 units, 3 Oakwood examples, and a history of finished turns", () => {
     expect(list.rows).toHaveLength(DEMO_UNITS.length);
     expect(DEMO_UNITS.filter((u) => u.fromSheet)).toHaveLength(17);
   });

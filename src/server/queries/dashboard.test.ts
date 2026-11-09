@@ -52,8 +52,12 @@ describe("dashboard", () => {
   });
 
   it("shows completed units only when asked", () => {
-    expect(units(board({ complete: "1", stage: "complete" }))).toEqual(["Courts 26"]);
-    expect(units(board({ flag: "Complete" }))).toEqual(["Courts 26"]);
+    const finished = units(board({ complete: "1", stage: "complete" }));
+    // Courts 26, and the demo's history of finished turns.
+    expect(finished).toContain("Courts 26");
+    expect(finished).toHaveLength(25);
+    expect(units(board({ flag: "Complete" }))).toEqual(finished);
+    expect(board().cards.some((c) => c.flag === "Complete")).toBe(false);
   });
 
   it("puts each card in its current stage's column, with who has it now", () => {
@@ -71,7 +75,7 @@ describe("dashboard", () => {
 
   it("computes the Summary tab from every unit, not just the filtered ones", () => {
     const d = board({ flag: "Overdue" });
-    expect(d.summary).toMatchObject({ activeTurns: 19, overdue: 2, blocked: 1, completedAllTime: 1, missingMoveOut: 1 });
+    expect(d.summary).toMatchObject({ activeTurns: 19, overdue: 2, blocked: 1, completedAllTime: 25, missingMoveOut: 1 });
   });
 
   it("ignores filter values it doesn't recognise", () => {
