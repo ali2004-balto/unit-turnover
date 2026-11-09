@@ -6,19 +6,20 @@ Inspection → Scope of work → In-house work → Cleaning → Photos → Leasi
 upload. Each person sees only their own tasks, and finishing a step hands the
 unit to the next person automatically.
 
-**Status: Phase 3 of 5.** Managers run everything from the dashboard. The
+**Status: Phase 4 of 5.** Managers run everything from the dashboard. The
 people who do each step (inspectors, crews, cleaners, photographers, leasing)
-sign in with a link and work from their phones: their tasks, checklists,
-findings and photos. Texts and emails aren't sent yet (Phase 4); until then a
-manager copies a person's link and sends it themselves.
+get a text or email with a link when it's their turn, and work from their
+phones: their tasks, checklists, findings and photos. Morning reminders, a
+managers' summary and alerts for stalled steps go out each day. It's ready to
+deploy: see [Going live](docs/deploy.md).
 
 | Phase | What it adds | State |
 | --- | --- | --- |
 | 1 | Data model, import from the sheet, demo data, workflow engine and tests | Done |
 | 2 | Manager login, dashboard (board and list), turnover page, create and bulk add, settings | Done |
 | 3 | Sign-in links, phone task screens, photos, inspection findings → draft scope | Done |
-| 4 | Text and email notifications, reminders, escalation, going live | Next |
-| 5 | Reports, Google Sheets export and sync, polish | |
+| 4 | Text and email notifications, reminders, escalation, going live | Done |
+| 5 | Reports, Google Sheets export and sync, spreadsheet upload, polish | Next |
 
 ## Run it on your computer
 
@@ -83,8 +84,44 @@ What each person sees:
 Sign-in links last 7 days, open only that person's tasks (never manager
 screens), and stop working when you sign the person out or deactivate them
 in Settings → People. Anyone can ask for a new link at `/signin` with their
-phone number or email; in development the link is printed in the terminal
-running `npm run dev`, because texts aren't sent until Phase 4.
+phone number or email. Locally, the message with the link shows in
+Settings → Messages and in the terminal running `npm run dev`.
+
+### Texts, emails and reminders (Phase 4)
+
+Locally the app runs in **dry-run mode**: nothing is sent, and every message
+is kept in full, link included, under **Settings → Messages**. A "Messages: dry
+run" badge at the top of the page says so.
+
+1. Sign in as the manager and create a turnover. Open **Settings → Messages**:
+   the inspector's text is there, sent a moment after you pressed Create.
+2. Open its link in a private window, as the inspector would from their phone.
+   Finish the inspection, approve the scope, and watch each handoff's message
+   appear for the next person.
+3. Press **Send this morning's messages now** to see the morning reminders and
+   your summary straight away (normally they go at 7:00).
+
+Who hears what:
+
+- **People on steps** get a text (or email, as set in Settings → People) when
+  a task becomes theirs, is booked, sent back, unblocked, given to someone
+  else or no longer needed. Each has a fresh sign-in link that opens the task.
+- **Each morning**, people with something on that day get one message:
+  bookings today, tasks due today, tasks that went late yesterday, and
+  yesterday's bookings that nobody marked done. Four or more things become
+  counts plus the link.
+- **Managers** get email: handoffs that need them (nobody assigned, send-backs,
+  units complete) and a **morning summary** of what's blocked, late, due soon,
+  stalled, booked today and done yesterday. They also get a **text** when a
+  step is blocked, and in the morning when a booking today or tomorrow can't
+  happen (the step before isn't done) or a step has had no updates for longer
+  than its "alert me after" days.
+- **Quiet hours:** no texts from 8 pm to 7 am; they wait for the morning.
+  Emails go any time. Change both times in Settings → Messages.
+
+Each reminder goes out once, on the morning it first applies. Failed sends are
+retried after 1, 5, 15 and 60 minutes; a wrong number or missing setup isn't
+retried. Settings → Messages shows why anything didn't go, with **Send again**.
 
 ### Managers
 
@@ -97,8 +134,9 @@ npm run admin:create -- --email you@example.com --name "Your Name"
 ```
 
 It prints a one-time password. Change it after signing in, under Settings →
-People. Everyone else will get sign-in links instead of passwords
-(Phase 3).
+People. Everyone else gets sign-in links instead of passwords. On a new
+production server, the first manager can instead be created at `/setup` (see
+[Going live](docs/deploy.md)).
 
 ### Commands
 
@@ -112,7 +150,8 @@ People. Everyone else will get sign-in links instead of passwords
 | `npm run db:reset` | Wipe the local database and reload the demo data (refuses while `npm run dev` is running) |
 | `npm run db:reset -- --empty` | Wipe it and start with no turnovers |
 | `npm run db:import -- <file.csv>` | Import a CSV export of your Master Tracker tab |
-| `npm run db:migrate` | Apply database changes (production deploys) |
+| `npm run db:setup` | Bring the database up to date (Vercel runs it before each build) |
+| `npm run db:migrate` | Apply database changes only |
 | `npm run db:generate` | Write a new migration after changing `src/db/schema.ts` |
 
 ### The demo data
@@ -187,8 +226,15 @@ which checks the rules and permissions and returns the new state plus timeline
 entries and notifications. The server saves all three in one database
 transaction (`src/server/workflow.ts`). A step can't be handed off without
 its notification being queued, a double-tap on a slow connection is applied
-once, and a change made from an out-of-date screen is refused. Notifications
-wait in an outbox table until the sender (Phase 4) delivers them.
+once, and a change made from an out-of-date screen is refused.
+
+**Messages go out from that outbox** (`src/server/notifications/`). Right
+after a change, and every 5 minutes from Vercel's scheduler (every minute
+inside `npm run dev`), the sender picks up what's due, works out how each
+person hears, adds a fresh sign-in link and sends it. Two senders running at
+once never take the same message. What each message says is in
+`src/domain/notifications/messages.ts`; who gets what and when is in
+`policy.ts` and `reminders.ts` next to it.
 
 **Permissions are enforced by the engine on the server.** Assignees can only
 act on steps assigned to them, and only when it's that step's turn. Marking
@@ -219,34 +265,43 @@ past their target date, which the sheet's flag hides.
 ```
 src/
   domain/          Pure logic, no database: dates, statuses, calculated columns,
-                   Summary tab, workflow engine and its rules
+                   Summary tab, workflow engine and its rules, and what each
+                   message says, who gets it and when (notifications/)
   db/              Schema, migrations, database connection, settings, seed data
   import/          Master Tracker CSV parser and importer
   server/          Runs workflow commands in transactions; sign-in and links;
-                   settings; findings; files and photos; queries for screens
+                   settings; findings; files and photos (local or Supabase);
+                   the message sender and morning run (notifications/);
+                   first-time setup; queries for screens
   app/             Next.js pages: (manager)/ for the dashboard, turnovers and
                    settings; (tasks)/ for the phone task screens; login/,
-                   signin/ and l/ (sign-in links); api/files for photos
+                   signin/, setup/ and l/ (sign-in links); api/files for
+                   photos; api/cron/tick for the scheduler
   components/      Shared UI (status and flag colours from the sheet)
+  instrumentation.ts  Checks for messages every minute during development
 scripts/           npm run db:* and admin:create commands
 tests/e2e/         Browser tests
+docs/deploy.md     Going live on Vercel and Supabase
 data/import/       Snapshot of your sheet used by the tests
 ```
 
 ## Environment variables
 
 Copy `.env.example` to `.env.local`. Nothing is required for local
-development.
+development. [`.env.example`](.env.example) describes each one, and
+[Going live](docs/deploy.md) says where to get the values.
 
 | Variable | Needed | What it is |
 | --- | --- | --- |
-| `DATABASE_URL` | Production | Postgres connection string (Supabase in production). Empty = local embedded database |
-| `PGLITE_DATA_DIR` | No | Where the local database lives (default `.data/pglite`) |
-| `APP_URL` | Production | The app's address, used in sign-in links, e.g. `https://turnover.example.com`. Locally it's worked out from the browser's address |
-| `FILES_DIR` | No | Where uploaded photos are kept locally (default `.data/uploads`). Production will use Supabase Storage (Phase 4) |
-
-Variables for email (Resend), text messages (Twilio), Supabase Storage and
-Google Sheets are added in the phases that use them.
+| `DATABASE_URL` | Production | Postgres connection string (Supabase's transaction pooler). Empty = local embedded database |
+| `APP_URL` | Production | The app's address, used in links in texts and emails |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Production | Photo storage. Empty = a local folder |
+| `CRON_SECRET` | Production | Lets Vercel's scheduler run reminders and retries |
+| `SETUP_TOKEN` | First deploy | Lets `/setup` create the first manager; remove it afterwards |
+| `NOTIFICATIONS_MODE` | Going live | `dry-run` (default: nothing is sent) or `live` |
+| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` | Live texts | Twilio account and the number texts come from |
+| `RESEND_API_KEY`, `EMAIL_FROM` | Live email | Resend key and the sender address on your verified domain |
+| `SUPABASE_BUCKET`, `PGLITE_DATA_DIR`, `FILES_DIR`, `IN_PROCESS_TICK` | No | Rarely needed; see `.env.example` |
 
 ## Tests
 
@@ -271,7 +326,18 @@ They cover:
 - the dashboard's filters, the paste-a-list reader and the settings rules
   (for example, the app always keeps one active manager);
 - the importer;
-- the demo data.
+- the demo data;
+- every message's wording, length and plain characters; who hears by text or
+  email; quiet hours (including the night the clocks change);
+- the morning rules: each reminder sent once, on the right morning, and what
+  counts as "no updates";
+- the sender: links that open the task, texts held overnight, retries and
+  giving up, two senders at once, a crashed send picked up again, placeholder
+  people never texted for real;
+- the Twilio and Resend requests, and Supabase Storage (against a stand-in);
+- uploads straight to storage (only addresses given out for that step, only
+  files that really arrived), and the streamed photo zip;
+- first-time setup (once only, needs the setup code).
 
 ```bash
 npm run test:e2e
@@ -283,6 +349,7 @@ send-back), and pasting a list. Then the whole thing again from the phones:
 the inspector adds findings with a photo, the manager approves the scope,
 and the crew, cleaner, photographer (full-quality photo and a folder link)
 and leasing (zip download) each finish their step on their own phone, plus
-checks that people can't open each other's tasks. They use their own server on port 3100 and
+checks that people can't open each other's tasks. And that creating a
+turnover sends the inspector a text whose link opens the inspection. They use their own server on port 3100 and
 their own database, so they don't touch your data. On a new computer, run
 `npx playwright install chromium` once first.
