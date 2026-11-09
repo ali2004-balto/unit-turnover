@@ -6,18 +6,18 @@ Inspection → Scope of work → In-house work → Cleaning → Photos → Leasi
 upload. Each person sees only their own tasks, and finishing a step hands the
 unit to the next person automatically.
 
-**Status: Phase 2 of 5.** Managers can sign in, see every unit on the
-dashboard, create turnovers (one at a time or by pasting a list), act on any
-step, and change the settings. Assignees don't have their own screens yet
-(Phase 3), and nobody is texted or emailed yet (Phase 4): messages are queued
-and wait for the sender.
+**Status: Phase 3 of 5.** Managers run everything from the dashboard. The
+people who do each step (inspectors, crews, cleaners, photographers, leasing)
+sign in with a link and work from their phones: their tasks, checklists,
+findings and photos. Texts and emails aren't sent yet (Phase 4); until then a
+manager copies a person's link and sends it themselves.
 
 | Phase | What it adds | State |
 | --- | --- | --- |
 | 1 | Data model, import from the sheet, demo data, workflow engine and tests | Done |
 | 2 | Manager login, dashboard (board and list), turnover page, create and bulk add, settings | Done |
-| 3 | Sign-in links for assignees, phone task screens, photos, inspection → scope | Next |
-| 4 | Text and email notifications, reminders, escalation, going live | |
+| 3 | Sign-in links, phone task screens, photos, inspection findings → draft scope | Done |
+| 4 | Text and email notifications, reminders, escalation, going live | Next |
 | 5 | Reports, Google Sheets export and sync, polish | |
 
 ## Run it on your computer
@@ -52,6 +52,39 @@ password **turnover-demo**. The first run creates a local database in
   (with access notes), people, manager passwords, default assignees per
   property, and the workflow editor.
 - **Master Tracker** (`/tracker`): your sheet's layout, calculated by the app.
+
+### Trying the phone screens (Phase 3)
+
+1. Sign in as the manager, open **Settings → People**, and press **Sign-in
+   link** next to someone, for example Inspector A. On a turnover page,
+   the step that's someone's turn has a **Sign-in link for …** button that
+   opens straight to that task.
+2. Open the link in a private window or another browser, ideally phone-sized.
+   One browser can be signed in as the manager and as one task person at the
+   same time.
+3. As the inspector, open Rivergate 303. Add findings room by room ("needs
+   work" or "just a note"), add photos, and press **Finish inspection**. The
+   findings that need work appear on the manager's turnover page as the draft
+   scope. Approve it, then open the in-house employee's link and tick off the
+   checklist.
+
+What each person sees:
+
+- **Your tasks**: what's their turn now, most pressing first, plus anything a
+  manager booked them for ahead of time (date only, no lockbox code yet).
+- **A task**: address (tap for maps) and access notes, dates, the checklist
+  with big checkboxes, photos (shrunk on the phone; the photographer's
+  finals go up at full quality), links, and recent notes. **Mark complete**
+  sits at the bottom; **More** has I've started, book a time, I'm blocked,
+  send it back, and add a note.
+- Nothing else: other people's tasks, and their own future steps that
+  nobody booked, aren't available to them.
+
+Sign-in links last 7 days, open only that person's tasks (never manager
+screens), and stop working when you sign the person out or deactivate them
+in Settings → People. Anyone can ask for a new link at `/signin` with their
+phone number or email; in development the link is printed in the terminal
+running `npm run dev`, because texts aren't sent until Phase 4.
 
 ### Managers
 
@@ -189,10 +222,11 @@ src/
                    Summary tab, workflow engine and its rules
   db/              Schema, migrations, database connection, settings, seed data
   import/          Master Tracker CSV parser and importer
-  server/          Runs workflow commands in transactions; sign-in; settings;
-                   queries for screens; form checking
+  server/          Runs workflow commands in transactions; sign-in and links;
+                   settings; findings; files and photos; queries for screens
   app/             Next.js pages: (manager)/ for the dashboard, turnovers and
-                   settings; login/
+                   settings; (tasks)/ for the phone task screens; login/,
+                   signin/ and l/ (sign-in links); api/files for photos
   components/      Shared UI (status and flag colours from the sheet)
 scripts/           npm run db:* and admin:create commands
 tests/e2e/         Browser tests
@@ -208,9 +242,11 @@ development.
 | --- | --- | --- |
 | `DATABASE_URL` | Production | Postgres connection string (Supabase in production). Empty = local embedded database |
 | `PGLITE_DATA_DIR` | No | Where the local database lives (default `.data/pglite`) |
+| `APP_URL` | Production | The app's address, used in sign-in links, e.g. `https://turnover.example.com`. Locally it's worked out from the browser's address |
+| `FILES_DIR` | No | Where uploaded photos are kept locally (default `.data/uploads`). Production will use Supabase Storage (Phase 4) |
 
-Variables for sign-in links, file storage, email (Resend), text messages
-(Twilio) and Google Sheets are added in the phases that use them.
+Variables for email (Resend), text messages (Twilio), Supabase Storage and
+Google Sheets are added in the phases that use them.
 
 ## Tests
 
@@ -226,7 +262,12 @@ They cover:
   skips, blocked, send-back, reassignment, booking, overdue and permissions;
 - the database layer on a real (embedded) Postgres: transactions,
   double-taps, conflicting edits;
-- sign-in sessions, passwords and lockout;
+- sign-in sessions, passwords and lockout; sign-in links (expiry, revoking,
+  requests and their limit);
+- inspection findings drafting the scope, and who can add, see and remove
+  photos;
+- what each person's task list shows, and that tasks aren't visible to
+  anyone else;
 - the dashboard's filters, the paste-a-list reader and the settings rules
   (for example, the app always keeps one active manager);
 - the importer;
@@ -238,6 +279,10 @@ npm run test:e2e
 
 These drive a real browser: signing in, the dashboard, creating a turnover
 and walking it through every step to Complete (including a block and a
-send-back), and pasting a list. They use their own server on port 3100 and
+send-back), and pasting a list. Then the whole thing again from the phones:
+the inspector adds findings with a photo, the manager approves the scope,
+and the crew, cleaner, photographer (full-quality photo and a folder link)
+and leasing (zip download) each finish their step on their own phone, plus
+checks that people can't open each other's tasks. They use their own server on port 3100 and
 their own database, so they don't touch your data. On a new computer, run
 `npx playwright install chromium` once first.
