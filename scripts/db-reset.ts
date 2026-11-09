@@ -4,6 +4,7 @@
  *
  * Only works on the local development database. Stop `npm run dev` first.
  */
+import "./env";
 import { rm } from "node:fs/promises";
 import { databaseConfig, migrateDatabase, openDatabase } from "@/db/client";
 import { seedBase } from "@/db/seed/base";

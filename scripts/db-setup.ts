@@ -5,6 +5,7 @@
  * demo data; a brand-new production database (DATABASE_URL) only gets the
  * basics: settings, the six-step template and your ten properties.
  */
+import "./env";
 import { migrateDatabase, openDatabase } from "@/db/client";
 import { seedBase } from "@/db/seed/base";
 import { isEmpty, seedDemo } from "@/db/seed/demo";

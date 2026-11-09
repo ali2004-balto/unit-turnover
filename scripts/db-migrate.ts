@@ -4,6 +4,7 @@
  * Applies new migrations to the database in DATABASE_URL (or the local one).
  * Run it once per deploy, before the new version starts.
  */
+import "./env";
 import { migrateDatabase, openDatabase } from "@/db/client";
 
 async function main() {

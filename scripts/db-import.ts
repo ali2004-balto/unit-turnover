@@ -10,6 +10,7 @@
  *
  * Units already in the app (same property, unit and move-out date) are skipped.
  */
+import "./env";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { migrateDatabase, openDatabase } from "@/db/client";
