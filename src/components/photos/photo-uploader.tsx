@@ -7,6 +7,53 @@ import { compressImage } from "@/lib/compress-image";
 import { cn } from "@/lib/utils";
 
 const BATCH = 5;
+const FAILED = "The upload didn't go through. Check your connection and try again.";
+
+interface PlannedUpload {
+  key: string;
+  name: string;
+  type: string;
+  upload: { url: string; method: "PUT"; headers: Record<string, string> };
+}
+
+async function postJson<T>(url: string, body: unknown): Promise<T> {
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const data = (await res.json().catch(() => ({}))) as T & { error?: string };
+  if (!res.ok) throw new Error(data.error ?? FAILED);
+  return data;
+}
+
+/**
+ * Sends a few files. In production they go straight to photo storage (the app
+ * hands out an address for each, then checks they arrived); in development
+ * they go through the app.
+ */
+async function sendBatch(target: Record<string, unknown>, files: File[]): Promise<void> {
+  const start = await postJson<{ mode: "app" } | { mode: "direct"; uploads: PlannedUpload[] }>("/api/files/uploads", {
+    ...target,
+    files: files.map((f) => ({ name: f.name, type: f.type, size: f.size })),
+  });
+  if (start.mode === "direct") {
+    await Promise.all(
+      start.uploads.map(async (u, i) => {
+        const res = await fetch(u.upload.url, { method: u.upload.method, headers: u.upload.headers, body: files[i] });
+        if (!res.ok) throw new Error(FAILED);
+      }),
+    );
+    await postJson("/api/files/uploads/done", { ...target, files: start.uploads.map((u) => ({ key: u.key, name: u.name, type: u.type })) });
+    return;
+  }
+  const form = new FormData();
+  for (const [key, value] of Object.entries(target)) {
+    if (value !== undefined) form.set(key, typeof value === "boolean" ? (value ? "1" : "0") : String(value));
+  }
+  for (const f of files) form.append("file", f);
+  const res = await fetch("/api/files", { method: "POST", body: form });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(body.error ?? FAILED);
+  }
+}
 
 /** "Take photo" (opens the camera on phones) and "Choose photos". Uploads in small batches with progress. */
 export function PhotoUploader({
@@ -41,20 +88,10 @@ export function PhotoUploader({
     try {
       setMessage(fullQuality ? "Getting ready…" : `Shrinking ${chosen.length === 1 ? "the photo" : `${chosen.length} photos`}…`);
       const files = fullQuality ? chosen : await Promise.all(chosen.map((f) => compressImage(f)));
+      const target = { turnoverId, stepId, findingId, as, fullQuality };
       for (let i = 0; i < files.length; i += BATCH) {
-        const form = new FormData();
-        form.set("turnoverId", turnoverId);
-        form.set("stepId", stepId);
-        if (findingId) form.set("findingId", findingId);
-        form.set("as", as);
-        form.set("fullQuality", fullQuality ? "1" : "0");
-        for (const f of files.slice(i, i + BATCH)) form.append("file", f);
         setMessage(files.length === 1 ? "Uploading…" : `Uploading ${Math.min(i + BATCH, files.length)} of ${files.length}…`);
-        const res = await fetch("/api/files", { method: "POST", body: form });
-        if (!res.ok) {
-          const body = (await res.json().catch(() => ({}))) as { error?: string };
-          throw new Error(body.error ?? "The upload didn't go through. Check your connection and try again.");
-        }
+        await sendBatch(target, files.slice(i, i + BATCH));
       }
       setMessage(files.length === 1 ? "Photo added" : `${files.length} photos added`);
       router.refresh();

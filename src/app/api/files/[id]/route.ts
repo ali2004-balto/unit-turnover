@@ -13,10 +13,16 @@ export async function GET(request: Request, ctx: RouteContext<"/api/files/[id]">
   if (!user) return notFound();
   const row = await findVisibleAttachment(await getDb(), user, id);
   if (!row?.storageKey) return notFound();
-  const file = await getFileStore().get(row.storageKey);
-  if (!file) return notFound();
   const download = new URL(request.url).searchParams.has("download");
   const name = (row.fileName ?? "file").replace(/[^\w.\- ]+/g, "_");
+  const store = getFileStore();
+  // Production storage: send the browser to a link that works for a few minutes.
+  if (store.downloadUrl) {
+    const url = await store.downloadUrl(row.storageKey, { fileName: name, download });
+    return new Response(null, { status: 302, headers: { Location: url, "Cache-Control": "private, max-age=60" } });
+  }
+  const file = await store.get(row.storageKey);
+  if (!file) return notFound();
   return new Response(new Uint8Array(file.data), {
     headers: {
       "Content-Type": row.contentType ?? file.contentType,

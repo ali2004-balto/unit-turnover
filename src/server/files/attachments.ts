@@ -8,13 +8,13 @@
  *   see the unit's photos.
  */
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import type { Executor } from "@/db/client";
 import { attachments, events, inspectionFindings, turnovers } from "@/db/schema";
 import { isStepActive } from "@/domain/workflow/engine";
 import { WorkflowError } from "@/domain/workflow/errors";
 import { loadTurnover } from "../turnover-store";
-import type { FileStore } from "./store";
+import type { FileStore, UploadTarget } from "./store";
 
 export const MAX_FILE_BYTES = 25 * 1024 * 1024;
 export const MAX_FILES_PER_UPLOAD = 20;
@@ -61,21 +61,32 @@ export interface IncomingFile {
   data: Uint8Array;
 }
 
-export async function addFiles(
-  ex: Executor,
-  store: FileStore,
-  user: FileUser,
-  target: { turnoverId: string; stepId: string; findingId?: string | null; fullQuality?: boolean },
-  files: IncomingFile[],
-  now = new Date(),
-): Promise<string[]> {
+export interface UploadTargetStep {
+  turnoverId: string;
+  stepId: string;
+  findingId?: string | null;
+  fullQuality?: boolean;
+}
+
+/** What's known about a file before it's stored: its name, type and size. */
+interface FileFacts {
+  name: string;
+  type: string;
+  size: number;
+}
+
+function checkFiles(files: FileFacts[]): void {
   if (files.length === 0) throw new WorkflowError("VALIDATION", "Choose a photo first.");
   if (files.length > MAX_FILES_PER_UPLOAD) throw new WorkflowError("VALIDATION", `Add at most ${MAX_FILES_PER_UPLOAD} files at a time.`);
   for (const f of files) {
     if (!ALLOWED_TYPES[f.type]) throw new WorkflowError("VALIDATION", `${f.name || "That file"} isn't a photo or PDF.`);
-    if (f.data.byteLength > MAX_FILE_BYTES) throw new WorkflowError("VALIDATION", `${f.name || "That file"} is over 25 MB.`);
-    if (f.data.byteLength === 0) throw new WorkflowError("VALIDATION", `${f.name || "That file"} is empty.`);
+    if (!(f.size <= MAX_FILE_BYTES)) throw new WorkflowError("VALIDATION", `${f.name || "That file"} is over 25 MB.`);
+    if (f.size === 0) throw new WorkflowError("VALIDATION", `${f.name || "That file"} is empty.`);
   }
+}
+
+/** The step being added to, once the person is cleared to add to it (and to the finding, if any). */
+async function checkTarget(ex: Executor, user: FileUser, target: UploadTargetStep) {
   const step = await requireCanAdd(ex, user, target.turnoverId, target.stepId);
   if (target.findingId) {
     const [finding] = await ex
@@ -84,47 +95,140 @@ export async function addFiles(
       .where(and(eq(inspectionFindings.id, target.findingId), eq(inspectionFindings.stepId, step.id)));
     if (!finding) throw new WorkflowError("NOT_FOUND", "That finding no longer exists.");
   }
+  return step;
+}
 
-  const ids: string[] = [];
-  const stored: string[] = [];
-  try {
-    for (const f of files) {
-      const id = randomUUID();
-      const type = ALLOWED_TYPES[f.type];
-      const key = `turnovers/${target.turnoverId}/${step.id}/${id}.${type.ext}`;
-      await store.put(key, f.data, f.type);
-      stored.push(key);
-      await ex.insert(attachments).values({
-        id,
-        turnoverId: target.turnoverId,
-        stepId: step.id,
-        findingId: target.findingId ?? null,
-        kind: type.kind,
-        storageKey: key,
-        fileName: f.name.slice(0, 200) || `${type.kind}.${type.ext}`,
-        contentType: f.type,
-        sizeBytes: f.data.byteLength,
-        fullQuality: target.fullQuality ?? false,
-        uploadedById: user.personId,
-        createdAt: now,
-      });
-      ids.push(id);
-    }
-  } catch (error) {
-    // Don't leave orphaned files behind if the database write failed.
-    await Promise.all(stored.map((k) => store.remove(k).catch(() => {})));
-    throw error;
+const storageKey = (turnoverId: string, stepId: string, id: string, ext: string) => `turnovers/${turnoverId}/${stepId}/${id}.${ext}`;
+
+/** Saves the attachment rows for stored files, plus one timeline entry. */
+async function recordFiles(
+  ex: Executor,
+  user: FileUser,
+  target: UploadTargetStep,
+  stepId: string,
+  files: Array<FileFacts & { id: string; key: string }>,
+  now: Date,
+): Promise<string[]> {
+  for (const f of files) {
+    const type = ALLOWED_TYPES[f.type];
+    await ex.insert(attachments).values({
+      id: f.id,
+      turnoverId: target.turnoverId,
+      stepId,
+      findingId: target.findingId ?? null,
+      kind: type.kind,
+      storageKey: f.key,
+      fileName: f.name.slice(0, 200) || `${type.kind}.${type.ext}`,
+      contentType: f.type,
+      sizeBytes: f.size,
+      fullQuality: target.fullQuality ?? false,
+      uploadedById: user.personId,
+      createdAt: now,
+    });
   }
   await ex.insert(events).values({
     turnoverId: target.turnoverId,
-    stepId: step.id,
+    stepId,
     actorId: user.personId,
     type: "files_added",
-    data: { count: ids.length, kind: files.every((f) => ALLOWED_TYPES[f.type].kind === "photo") ? "photo" : "file" },
+    data: { count: files.length, kind: files.every((f) => ALLOWED_TYPES[f.type].kind === "photo") ? "photo" : "file" },
     at: now,
   });
   await ex.update(turnovers).set({ updatedAt: now }).where(eq(turnovers.id, target.turnoverId));
-  return ids;
+  return files.map((f) => f.id);
+}
+
+/** Uploads that come through the app (development, or a store without direct uploads). */
+export async function addFiles(
+  ex: Executor,
+  store: FileStore,
+  user: FileUser,
+  target: UploadTargetStep,
+  files: IncomingFile[],
+  now = new Date(),
+): Promise<string[]> {
+  checkFiles(files.map((f) => ({ name: f.name, type: f.type, size: f.data.byteLength })));
+  const step = await checkTarget(ex, user, target);
+
+  const stored: Array<FileFacts & { id: string; key: string }> = [];
+  try {
+    for (const f of files) {
+      const id = randomUUID();
+      const key = storageKey(target.turnoverId, step.id, id, ALLOWED_TYPES[f.type].ext);
+      await store.put(key, f.data, f.type);
+      stored.push({ id, key, name: f.name, type: f.type, size: f.data.byteLength });
+    }
+    return await recordFiles(ex, user, target, step.id, stored, now);
+  } catch (error) {
+    // Don't leave orphaned files behind if the database write failed.
+    await Promise.all(stored.map((f) => store.remove(f.key).catch(() => {})));
+    throw error;
+  }
+}
+
+export interface PlannedUpload {
+  key: string;
+  name: string;
+  type: string;
+  upload: UploadTarget;
+}
+
+/**
+ * A direct upload, step 1: checks the files and the person, then gives one
+ * upload address per file. Nothing is recorded until step 2.
+ */
+export async function startUploads(
+  ex: Executor,
+  store: FileStore,
+  user: FileUser,
+  target: UploadTargetStep,
+  files: FileFacts[],
+): Promise<PlannedUpload[]> {
+  if (!store.createUpload) throw new WorkflowError("INVALID_STATE", "Uploads go through the app here.");
+  checkFiles(files);
+  const step = await checkTarget(ex, user, target);
+  return Promise.all(
+    files.map(async (f) => {
+      const key = storageKey(target.turnoverId, step.id, randomUUID(), ALLOWED_TYPES[f.type].ext);
+      return { key, name: f.name, type: f.type, upload: await store.createUpload!(key, f.type) };
+    }),
+  );
+}
+
+/**
+ * A direct upload, step 2: the browser says its files arrived. Each one must
+ * be an address handed out for this step, really be in storage, and be a size
+ * the app accepts. Then they're recorded like any other upload.
+ */
+export async function finishUploads(
+  ex: Executor,
+  store: FileStore,
+  user: FileUser,
+  target: UploadTargetStep,
+  files: Array<{ key: string; name: string; type: string }>,
+  now = new Date(),
+): Promise<string[]> {
+  if (!store.stat) throw new WorkflowError("INVALID_STATE", "Uploads go through the app here.");
+  if (files.length === 0 || files.length > MAX_FILES_PER_UPLOAD) throw new WorkflowError("VALIDATION", "Something about this upload is wrong.");
+  const step = await checkTarget(ex, user, target);
+  const pattern = new RegExp(`^turnovers/${target.turnoverId}/${step.id}/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\.([a-z0-9]{2,5})$`);
+
+  const ready: Array<FileFacts & { id: string; key: string }> = [];
+  for (const f of files) {
+    const match = pattern.exec(f.key);
+    const type = ALLOWED_TYPES[f.type];
+    if (!match || !type || match[2] !== type.ext) throw new WorkflowError("VALIDATION", "Something about this upload is wrong.");
+    const found = await store.stat(f.key);
+    if (!found) throw new WorkflowError("VALIDATION", `${f.name || "A file"} didn't finish uploading. Try again.`);
+    ready.push({ id: match[1], key: f.key, name: f.name, type: f.type, size: found.size });
+  }
+  checkFiles(ready);
+  const already = await ex
+    .select({ id: attachments.id })
+    .from(attachments)
+    .where(inArray(attachments.id, ready.map((f) => f.id)));
+  if (already.length > 0) throw new WorkflowError("VALIDATION", "Those photos are already added.");
+  return recordFiles(ex, user, target, step.id, ready, now);
 }
 
 export async function addLink(

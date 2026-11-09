@@ -7,7 +7,16 @@ import { createTestDb, type TestDb } from "@/test/db";
 import { saveFinding } from "../findings";
 import { loadTurnover } from "../turnover-store";
 import { createTurnover, runCommand } from "../workflow";
-import { addFiles, addLink, canSeeTurnover, findVisibleAttachment, listAttachments, removeAttachment } from "./attachments";
+import {
+  addFiles,
+  addLink,
+  canSeeTurnover,
+  finishUploads,
+  findVisibleAttachment,
+  listAttachments,
+  removeAttachment,
+  startUploads,
+} from "./attachments";
 import { LocalFileStore } from "./store";
 
 let t: TestDb;
@@ -102,5 +111,65 @@ describe("links", () => {
     await expect(addLink(t.db, inspector(), { turnoverId, stepId: inspectionId, url: "javascript:alert(1)" })).rejects.toThrow(/https/);
     await expect(addLink(t.db, inspector(), { turnoverId, stepId: inspectionId, url: "dropbox folder" })).rejects.toThrow(/whole link/);
     expect((await listAttachments(t.db, turnoverId))[0]).toMatchObject({ kind: "link", url: "https://www.dropbox.com/sh/abc", caption: "Finals" });
+  });
+});
+
+/** A stand-in for Supabase Storage: remembers what browsers "uploaded" straight to it. */
+class DirectStore extends LocalFileStore {
+  readonly arrived = new Map<string, number>();
+  async createUpload(key: string, contentType: string) {
+    return { url: `https://storage.example.com/upload/${key}?token=t`, method: "PUT" as const, headers: { "Content-Type": contentType } };
+  }
+  async stat(key: string) {
+    const size = this.arrived.get(key);
+    return size === undefined ? null : { size, contentType: "image/jpeg" };
+  }
+}
+
+describe("uploads straight to storage", () => {
+  const jpeg = (size = 1000) => ({ name: "kitchen.jpg", type: "image/jpeg", size });
+  let direct: DirectStore;
+  beforeEach(() => {
+    direct = new DirectStore(dir);
+  });
+
+  it("hands out one address per file, then records the files that arrived", async () => {
+    const target = { turnoverId, stepId: inspectionId };
+    const [planned] = await startUploads(t.db, direct, inspector(), target, [jpeg()]);
+    expect(planned.key).toMatch(new RegExp(`^turnovers/${turnoverId}/${inspectionId}/[0-9a-f-]{36}\\.jpg$`));
+    expect(planned.upload).toEqual({ url: `https://storage.example.com/upload/${planned.key}?token=t`, method: "PUT", headers: { "Content-Type": "image/jpeg" } });
+    expect(await listAttachments(t.db, turnoverId)).toEqual([]); // nothing is recorded until it arrives
+
+    direct.arrived.set(planned.key, 1234);
+    const [id] = await finishUploads(t.db, direct, inspector(), target, [{ key: planned.key, name: "kitchen.jpg", type: "image/jpeg" }]);
+    expect(planned.key).toContain(id);
+    const [row] = await listAttachments(t.db, turnoverId);
+    expect(row).toMatchObject({ id, kind: "photo", storageKey: planned.key, sizeBytes: 1234, uploadedById: t.ids.inspector });
+  });
+
+  it("checks the person before handing out any address", async () => {
+    await expect(startUploads(t.db, direct, crew(), { turnoverId, stepId: inspectionId }, [jpeg()])).rejects.toThrow(/own task/);
+    await expect(startUploads(t.db, direct, inspector(), { turnoverId, stepId: inspectionId }, [{ ...jpeg(), type: "text/html" }])).rejects.toThrow(
+      /isn't a photo or PDF/,
+    );
+  });
+
+  it("only records files that really arrived, at addresses given out for that step", async () => {
+    const target = { turnoverId, stepId: inspectionId };
+    const [planned] = await startUploads(t.db, direct, inspector(), target, [jpeg()]);
+    const finish = (key: string, type = "image/jpeg") => finishUploads(t.db, direct, inspector(), target, [{ key, name: "kitchen.jpg", type }]);
+
+    await expect(finish(planned.key)).rejects.toThrow(/didn't finish uploading/);
+    direct.arrived.set(planned.key, 1000);
+    const workId = (await loadTurnover(t.db, turnoverId))!.steps[2].id;
+    await expect(finish(planned.key.replace(inspectionId, workId))).rejects.toThrow(/wrong/);
+    await expect(finish(planned.key, "image/png")).rejects.toThrow(/wrong/);
+    await expect(finish("turnovers/../../etc/passwd.jpg")).rejects.toThrow(/wrong/);
+
+    direct.arrived.set(planned.key, 30 * 1024 * 1024);
+    await expect(finish(planned.key)).rejects.toThrow(/over 25 MB/);
+    direct.arrived.set(planned.key, 1000);
+    await finish(planned.key);
+    await expect(finish(planned.key)).rejects.toThrow(/already added/);
   });
 });
