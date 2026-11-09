@@ -7,6 +7,7 @@
  *
  * Both use the same schema and migrations.
  */
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import type { ExtractTablesWithRelations } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
@@ -38,6 +39,7 @@ export function databaseConfig(env: NodeJS.ProcessEnv = process.env): DatabaseCo
 export async function openPglite(dataDir: string | null): Promise<DbHandle> {
   const { PGlite } = await import("@electric-sql/pglite");
   const { drizzle } = await import("drizzle-orm/pglite");
+  if (dataDir) await mkdir(dataDir, { recursive: true });
   const client = dataDir ? new PGlite(dataDir) : new PGlite();
   const db = drizzle(client, { schema }) as unknown as DB;
   return { db, kind: "pglite", close: () => client.close() };

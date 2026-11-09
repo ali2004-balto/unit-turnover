@@ -11,10 +11,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check": "npm run typecheck && npm run lint && npm test",
-    "db:generate": "drizzle-kit generate",
     "db:setup": "tsx scripts/db-setup.ts",
+    "db:migrate": "tsx scripts/db-migrate.ts",
     "db:reset": "tsx scripts/db-reset.ts",
-    "db:import": "tsx scripts/db-import.ts"
+    "db:import": "tsx scripts/db-import.ts",
+    "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.15",
