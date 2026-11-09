@@ -24,7 +24,7 @@ export type StepKind = (typeof STEP_KINDS)[number];
 export const CHECKLIST_STATES = ["open", "done", "to_confirm", "dropped"] as const;
 export type ChecklistState = (typeof CHECKLIST_STATES)[number];
 
-export const CHECKLIST_SOURCES = ["template", "scope", "send_back", "manual", "import"] as const;
+export const CHECKLIST_SOURCES = ["template", "scope", "send_back", "manual", "import", "inspection"] as const;
 export type ChecklistSource = (typeof CHECKLIST_SOURCES)[number];
 
 export interface ChecklistItem {
@@ -58,6 +58,14 @@ export interface StepTemplate {
   escalateAfterDays: number | null;
   /** Default checklist items. */
   checklist: string[];
+}
+
+/** One thing the inspector found. Findings that need work become scope items. */
+export interface InspectionFinding {
+  id: string;
+  room: string;
+  description: string;
+  needsWork: boolean;
 }
 
 export interface StepState extends Omit<StepTemplate, "checklist"> {
@@ -120,7 +128,13 @@ export type Command =
   | { type: "start"; stepId: string }
   | { type: "schedule"; stepId: string; on: DateOnly; time?: string | null }
   | { type: "unschedule"; stepId: string }
-  | { type: "complete"; stepId: string; note?: string }
+  | {
+      type: "complete";
+      stepId: string;
+      note?: string;
+      /** For an inspection step: what was found. Filled in by the server from the database, never by a form. */
+      findings?: InspectionFinding[];
+    }
   | { type: "markNa"; stepId: string; reason?: string }
   | { type: "block"; stepId: string; reason: string }
   | { type: "unblock"; stepId: string; note?: string }

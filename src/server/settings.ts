@@ -18,6 +18,7 @@ import { DEFAULT_SETTINGS } from "@/db/settings";
 import { checkTemplate, type DraftStep } from "@/domain/workflow/template-rules";
 import { ROLES, type Role } from "@/domain/workflow/types";
 import { passwordProblem } from "./auth/passwords";
+import { revokeLinksFor } from "./auth/links";
 import { deleteSessionsFor, setPassword } from "./auth/sessions";
 
 export class SettingsError extends Error {
@@ -173,7 +174,10 @@ export async function savePerson(ex: Executor, actorId: string, input: PersonInp
   };
   if (input.id) {
     await ex.update(people).set(values).where(eq(people.id, input.id));
-    if (!input.active) await deleteSessionsFor(ex, input.id);
+    if (!input.active) {
+      await deleteSessionsFor(ex, input.id);
+      await revokeLinksFor(ex, input.id);
+    }
     return input.id;
   }
   const [created] = await ex.insert(people).values(values).returning({ id: people.id });

@@ -318,6 +318,84 @@ export const sessions = pgTable(
   (t) => [index("sessions_person").on(t.personId)],
 );
 
+/**
+ * Sign-in links for people who don't have a password. Only a hash of the
+ * token is stored. A link signs its person in to their own tasks, never to
+ * manager screens, and stops working when it expires or is revoked.
+ */
+export const accessLinks = pgTable(
+  "access_links",
+  {
+    id: text("id").primaryKey(),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id, { onDelete: "cascade" }),
+    /** manual (a manager copied it), request (the person asked), notification (sent with a message). */
+    purpose: text("purpose").notNull(),
+    /** The task the link opens, if any. */
+    stepId: uuid("step_id").references(() => turnoverSteps.id, { onDelete: "set null" }),
+    createdById: uuid("created_by_id").references(() => people.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    lastUsedAt: ts("last_used_at"),
+    useCount: integer("use_count").notNull().default(0),
+    revokedAt: ts("revoked_at"),
+  },
+  (t) => [index("access_links_person").on(t.personId, t.createdAt)],
+);
+
+/** What the inspector found, room by room. Findings that need work become the draft scope. */
+export const inspectionFindings = pgTable(
+  "inspection_findings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    turnoverId: uuid("turnover_id")
+      .notNull()
+      .references(() => turnovers.id, { onDelete: "cascade" }),
+    stepId: uuid("step_id")
+      .notNull()
+      .references(() => turnoverSteps.id, { onDelete: "cascade" }),
+    room: text("room").notNull(),
+    description: text("description").notNull(),
+    needsWork: boolean("needs_work").notNull().default(true),
+    createdById: uuid("created_by_id").references(() => people.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("inspection_findings_step").on(t.stepId)],
+);
+
+export const attachmentKind = pgEnum("attachment_kind", ["photo", "file", "link"]);
+
+/** Photos, files and links, stored per unit and step. Files live in object storage under storageKey. */
+export const attachments = pgTable(
+  "attachments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    turnoverId: uuid("turnover_id")
+      .notNull()
+      .references(() => turnovers.id, { onDelete: "cascade" }),
+    stepId: uuid("step_id").references(() => turnoverSteps.id, { onDelete: "set null" }),
+    findingId: uuid("finding_id").references(() => inspectionFindings.id, { onDelete: "set null" }),
+    kind: attachmentKind("kind").notNull(),
+    storageKey: text("storage_key"),
+    fileName: text("file_name"),
+    contentType: text("content_type"),
+    sizeBytes: integer("size_bytes"),
+    width: integer("width"),
+    height: integer("height"),
+    /** For links: a Dropbox or Google Drive folder, or the posted listing. */
+    url: text("url"),
+    caption: text("caption"),
+    /** Uploaded without compression (listing photos). */
+    fullQuality: boolean("full_quality").notNull().default(false),
+    uploadedById: uuid("uploaded_by_id").references(() => people.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    deletedAt: ts("deleted_at"),
+  },
+  (t) => [index("attachments_turnover").on(t.turnoverId), index("attachments_step").on(t.stepId)],
+);
+
 /** Commands already applied, so a double-tap on a slow connection applies once. */
 export const processedRequests = pgTable("processed_requests", {
   requestId: text("request_id").primaryKey(),

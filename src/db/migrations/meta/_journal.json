@@ -15,6 +15,13 @@
       "when": 1794247354716,
       "tag": "0001_manager_login",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794250689213,
+      "tag": "0002_assignee_links_findings_photos",
+      "breakpoints": true
     }
   ]
 }

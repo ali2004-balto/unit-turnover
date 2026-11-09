@@ -112,7 +112,7 @@ export function SignOutButton({ personId }: { personId: string }) {
       <button
         type="submit"
         disabled={pending}
-        title="Signs them out on every device, e.g. after a lost phone"
+        title="Signs them out on every device and turns off their sign-in links, e.g. after a lost phone"
         aria-label="Sign out on every device"
         className="h-8 rounded-md px-3 text-xs whitespace-nowrap text-muted-foreground hover:bg-muted hover:text-foreground"
       >

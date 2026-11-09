@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { getCurrentSession } from "@/server/auth/current";
 import { getDb } from "@/server/db";
 import { Section } from "../section";
+import { SignInLinkButton } from "@/components/sign-in-link-button";
 import { PasswordDialog, PersonDialog, SignOutButton } from "./person-dialogs";
 
 export const metadata: Metadata = { title: "People" };
@@ -63,7 +64,7 @@ export default function PeoplePage() {
                       <td className="px-4 py-2">{p.email ?? "–"}</td>
                       <td className="px-4 py-2 whitespace-nowrap">{CHANNEL[p.notifyChannel]}</td>
                       <td className="px-4 py-2">
-                        <div className="flex justify-end gap-1">
+                        <div className="flex flex-wrap justify-end gap-1">
                           <PersonDialog
                             person={{
                               id: p.id,
@@ -77,6 +78,7 @@ export default function PeoplePage() {
                             }}
                           />
                           {p.roles.includes("admin") ? <PasswordDialog personId={p.id} name={p.name} hasPassword={hasPassword.has(p.id)} /> : null}
+                          {p.active ? <SignInLinkButton personId={p.id} personName={p.name} /> : null}
                           {p.id !== me?.person.id && p.active ? <SignOutButton personId={p.id} /> : null}
                         </div>
                       </td>

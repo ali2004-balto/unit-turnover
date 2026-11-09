@@ -6,6 +6,7 @@ import { z } from "zod";
 import { type DraftStep } from "@/domain/workflow/template-rules";
 import { ROLES, STEP_KINDS } from "@/domain/workflow/types";
 import { requireManager } from "@/server/auth/current";
+import { revokeLinksFor } from "@/server/auth/links";
 import { deleteSessionsFor } from "@/server/auth/sessions";
 import { getDb } from "@/server/db";
 import {
@@ -100,7 +101,10 @@ export async function signOutEverywhereAction(_p: SettingsState, form: FormData)
     const personId = optionalId(form, "personId");
     if (!personId) throw new SettingsError("Pick a person.");
     if (personId === actorId) throw new SettingsError("Use the sign-out button to sign yourself out.");
-    await deleteSessionsFor(await getDb(), personId);
+    const db = await getDb();
+    await deleteSessionsFor(db, personId);
+    // Their sign-in links stop working too, e.g. after a lost phone.
+    await revokeLinksFor(db, personId);
   });
 }
 
