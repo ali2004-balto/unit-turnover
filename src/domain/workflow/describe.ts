@@ -146,6 +146,32 @@ export function describeEvents(events: TimelineEvent[], nameOf: (personId: strin
         entries.push(entry(`${who} changed the ${Object.keys(changes).map((f) => FIELD_NAMES[f] ?? f).join(" and ")}`, "default", parts.join(" · ")));
         break;
       }
+      case "finding_added":
+        entries.push(
+          entry(`${who} noted in ${d.room}`, "default", `${d.description}${d.needsWork ? "" : " (no work needed)"}`),
+        );
+        break;
+      case "finding_updated":
+        entries.push(entry(`${who} changed a finding in ${d.room}`, "muted", d.description as string));
+        break;
+      case "finding_removed":
+        entries.push(entry(`${who} removed a finding in ${d.room}`, "muted", d.description as string));
+        break;
+      case "findings_applied":
+        entries.push(entry(`${d.items} finding${d.items === 1 ? "" : "s"} became draft scope items`, "muted"));
+        break;
+      case "files_added": {
+        const n = Number(d.count ?? 1);
+        const what = d.kind === "photo" ? (n === 1 ? "a photo" : `${n} photos`) : n === 1 ? "a file" : `${n} files`;
+        entries.push(entry(`${who} added ${what} to ${step}`, "muted"));
+        break;
+      }
+      case "link_added":
+        entries.push(entry(`${who} added a link to ${step}`, "muted", String(d.caption ?? d.url ?? "")));
+        break;
+      case "file_removed":
+        entries.push(entry(`${who} removed ${d.kind === "link" ? "a link" : "a photo"} from ${step}`, "muted"));
+        break;
       case "turnover_completed":
         entries.push(entry("Complete: every step is Done or N/A", "success"));
         break;

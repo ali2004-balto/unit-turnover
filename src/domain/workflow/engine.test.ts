@@ -532,3 +532,41 @@ describe("version", () => {
     expect(s.t.version).toBe(2);
   });
 });
+
+describe("inspection findings draft the scope", () => {
+  const findings = [
+    { id: "f1", room: "Kitchen", description: "Cracked floor tile by the fridge", needsWork: true },
+    { id: "f2", room: "Bathroom 1", description: "Grout stained, cleaning should do it", needsWork: false },
+    { id: "f3", room: "Whole unit", description: "Touch up paint", needsWork: true },
+  ];
+
+  it("turns findings that need work into scope items for the manager to review", () => {
+    const s = new Scenario();
+    s.run(inspector, { type: "complete", stepId: s.step("inspection").id, findings });
+    expect(s.step("scope").checklist.map((c) => [c.text, c.state, c.source, c.sourceItemId])).toEqual([
+      ["Kitchen: Cracked floor tile by the fridge", "open", "inspection", "f1"],
+      ["Touch up paint", "open", "inspection", "f3"],
+    ]);
+    expect(s.notified()).toEqual([{ to: admin, kind: "step_assigned", data: expect.objectContaining({ stepName: "Scope of work" }) }]);
+  });
+
+  it("doesn't copy a finding twice when the inspection is redone after a send-back", () => {
+    const s = new Scenario();
+    s.run(inspector, { type: "complete", stepId: s.step("inspection").id, findings });
+    s.run(admin, { type: "sendBack", fromStepId: s.step("scope").id, toStepId: s.step("inspection").id, reason: "Check the balcony too" });
+    s.run(inspector, {
+      type: "complete",
+      stepId: s.step("inspection").id,
+      findings: [...findings, { id: "f4", room: "Balcony / patio", description: "Loose railing", needsWork: true }],
+    });
+    expect(s.step("scope").checklist.map((c) => c.sourceItemId)).toEqual(["f1", "f3", "f4"]);
+  });
+
+  it("leaves the scope empty when nothing needs work, so approving it skips in-house work", () => {
+    const s = new Scenario();
+    s.run(inspector, { type: "complete", stepId: s.step("inspection").id, findings: [findings[1]] });
+    expect(s.step("scope").checklist).toEqual([]);
+    s.finish("scope");
+    expect(s.step("work").status).toBe("na");
+  });
+});

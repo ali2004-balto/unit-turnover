@@ -21,6 +21,7 @@ import { type DateOnly, dateInZone } from "@/domain/dates";
 import { applyCommand, createTurnoverState } from "@/domain/workflow/engine";
 import { WorkflowError } from "@/domain/workflow/errors";
 import type { Actor, Command, EngineContext, EngineResult, StepTemplate } from "@/domain/workflow/types";
+import { findingsForStep } from "./findings";
 import { insertEvents, insertNotifications, insertTurnover, loadTurnover, saveTurnover } from "./turnover-store";
 
 export interface RunOptions {
@@ -81,8 +82,15 @@ export async function runCommand(
       throw new WorkflowError("CONFLICT", "Someone else just changed this unit. Refresh to see the latest, then try again.");
     }
 
+    // Completing an inspection drafts the scope from its findings, read here from the database.
+    let effective = command;
+    if (command.type === "complete") {
+      const step = before.steps.find((s) => s.id === command.stepId);
+      effective = { ...command, findings: step?.kind === "inspection" ? await findingsForStep(tx, step.id) : undefined };
+    }
+
     const ctx = await engineContext(tx, opts);
-    const result = applyCommand(before, command, ctx);
+    const result = applyCommand(before, effective, ctx);
     if (result.changed) {
       await saveTurnover(tx, before, result.turnover, ctx.now);
       await insertEvents(tx, turnoverId, result.events);

@@ -23,6 +23,7 @@ import type {
   EngineContext,
   EngineResult,
   EventDraft,
+  InspectionFinding,
   NotificationDraft,
   NotificationKind,
   StepState,
@@ -270,6 +271,22 @@ function reopenStep(run: Run, s: StepState): StepStatus {
   return previous;
 }
 
+/** Finishing the inspection drafts the scope: each finding that needs work becomes a scope item. */
+function applyFindings(run: Run, inspectionIndex: number, findings: InspectionFinding[]): void {
+  const scopeIndex = run.t.steps.findIndex((s, i) => i > inspectionIndex && s.kind === "scope");
+  if (scopeIndex === -1) return;
+  const scope = run.t.steps[scopeIndex];
+  const already = new Set(scope.checklist.map((c) => c.sourceItemId).filter(Boolean));
+  let added = 0;
+  for (const f of findings) {
+    if (!f.needsWork || already.has(f.id)) continue;
+    const text = f.room && f.room !== "Whole unit" ? `${f.room}: ${f.description}` : f.description;
+    run.newChecklistItem(scope, text.slice(0, 300), { source: "inspection", sourceItemId: f.id });
+    added += 1;
+  }
+  if (added > 0) run.event("findings_applied", scope, { items: added });
+}
+
 /** Approving the scope gives the work step its checklist, or skips it when there is nothing to do. */
 function applyScope(run: Run, scope: StepState, scopeIndex: number): void {
   const workIndex = run.t.steps.findIndex((s, i) => i > scopeIndex && s.kind === "work");
@@ -372,6 +389,7 @@ function handle(run: Run, command: Command): void {
       s.startedAt ??= ctx.now;
       run.finishStep(s, "done");
       run.event("step_completed", s, note ? { note } : {}, from, "done");
+      if (s.kind === "inspection") applyFindings(run, i, command.findings ?? []);
       if (s.kind === "scope") applyScope(run, s, i);
       return;
     }
