@@ -33,6 +33,8 @@ export type DatabaseConfig = { kind: "postgres"; url: string } | { kind: "pglite
 export function databaseConfig(env: NodeJS.ProcessEnv = process.env): DatabaseConfig {
   const url = env.DATABASE_URL?.trim();
   if (url) return { kind: "postgres", url };
+  // Vercel has no lasting disk: the embedded database would lose everything.
+  if (env.VERCEL) throw new Error("DATABASE_URL isn't set. Add your Supabase connection string in the Vercel project's settings.");
   // Development only: production sets DATABASE_URL, so don't make the bundler trace this folder.
   return {
     kind: "pglite",

@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "tsx scripts/db-setup.ts && next dev",
     "build": "next build",
+    "vercel-build": "npm run db:setup && next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
