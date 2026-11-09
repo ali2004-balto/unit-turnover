@@ -16,7 +16,8 @@
     "db:reset": "tsx scripts/db-reset.ts",
     "db:import": "tsx scripts/db-import.ts",
     "db:generate": "drizzle-kit generate",
-    "admin:create": "tsx scripts/admin-create.ts"
+    "admin:create": "tsx scripts/admin-create.ts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.15",
@@ -35,6 +36,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^22",
     "@types/papaparse": "^5.5.2",

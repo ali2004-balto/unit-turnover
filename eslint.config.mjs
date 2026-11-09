@@ -21,9 +21,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Generated migrations and local data
+    // Generated migrations, local data and end-to-end test output
     "src/db/migrations/**",
     ".data/**",
+    ".next-e2e/**",
+    "test-results/**",
+    "playwright-report/**",
   ]),
 ]);
 

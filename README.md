@@ -6,15 +6,17 @@ Inspection → Scope of work → In-house work → Cleaning → Photos → Leasi
 upload. Each person sees only their own tasks, and finishing a step hands the
 unit to the next person automatically.
 
-**Status: Phase 1 of 5** (data model, sheet import, workflow engine, tests).
-There is no login and no editing screen yet. The one screen, **Master
-Tracker**, is a read-only view for checking the app against your sheet.
+**Status: Phase 2 of 5.** Managers can sign in, see every unit on the
+dashboard, create turnovers (one at a time or by pasting a list), act on any
+step, and change the settings. Assignees don't have their own screens yet
+(Phase 3), and nobody is texted or emailed yet (Phase 4): messages are queued
+and wait for the sender.
 
 | Phase | What it adds | State |
 | --- | --- | --- |
 | 1 | Data model, import from the sheet, demo data, workflow engine and tests | Done |
-| 2 | Manager login, dashboard (board and list), create turnover, bulk add, settings | Next |
-| 3 | Sign-in links for assignees, phone task screens, photos, inspection → scope | |
+| 2 | Manager login, dashboard (board and list), turnover page, create and bulk add, settings | Done |
+| 3 | Sign-in links for assignees, phone task screens, photos, inspection → scope | Next |
 | 4 | Text and email notifications, reminders, escalation, going live | |
 | 5 | Reports, Google Sheets export and sync, polish | |
 
@@ -28,17 +30,53 @@ npm install
 npm run dev
 ```
 
-Open <http://localhost:3000>. The first run creates a local database in
+Open <http://localhost:3000> and sign in as **manager@example.com** with the
+password **turnover-demo**. The first run creates a local database in
 `.data/pglite` and fills it with demo data.
+
+### What you can do (Phase 2)
+
+- **Dashboard** (`/`): the Summary tab's numbers as tiles (click one to filter),
+  a board with a column per stage or a list, filters by property, person,
+  stage, flag and text, and the pipeline and crew workload tables. It refreshes
+  itself every 15 seconds.
+- **Turnover page**: each step with who has it, its status, due date, booking,
+  checklist and blockers, with buttons to start, book, mark done, block or
+  unblock, mark N/A, send back, and reassign. You can edit, keep, drop or mark
+  "to confirm" each scope item, then approve the scope. Every change appears in
+  the timeline.
+- **New turnover** (`/turnovers/new`): one unit, filled in from the property's
+  default people and target date, or **Paste a list** (`Balwin 1-6, Nov 2`,
+  rows copied from a spreadsheet, …) with a preview that flags problems.
+- **Settings**: the due-soon window, default target, time zone, properties
+  (with access notes), people, manager passwords, default assignees per
+  property, and the workflow editor.
+- **Master Tracker** (`/tracker`): your sheet's layout, calculated by the app.
+
+### Managers
+
+Managers sign in with an email and password. Ten wrong passwords in a row lock
+the account for 15 minutes. To add a real manager (on your computer, or
+against production with `DATABASE_URL` set):
+
+```bash
+npm run admin:create -- --email you@example.com --name "Your Name"
+```
+
+It prints a one-time password. Change it after signing in, under Settings →
+People. Everyone else will get sign-in links instead of passwords
+(Phase 3).
 
 ### Commands
 
 | Command | What it does |
 | --- | --- |
 | `npm run dev` | Start the app at http://localhost:3000 (sets up the database first) |
-| `npm test` | Run the tests |
+| `npm test` | Run the unit and database tests |
+| `npm run test:e2e` | Run the browser tests (starts its own server and database) |
 | `npm run check` | Type-check, lint and test: run before every commit |
-| `npm run db:reset` | Wipe the local database and reload the demo data (stop `npm run dev` first) |
+| `npm run admin:create -- --email … --name …` | Add a manager, or reset a manager's password |
+| `npm run db:reset` | Wipe the local database and reload the demo data (refuses while `npm run dev` is running) |
 | `npm run db:reset -- --empty` | Wipe it and start with no turnovers |
 | `npm run db:import -- <file.csv>` | Import a CSV export of your Master Tracker tab |
 | `npm run db:migrate` | Apply database changes (production deploys) |
@@ -151,10 +189,13 @@ src/
                    Summary tab, workflow engine and its rules
   db/              Schema, migrations, database connection, settings, seed data
   import/          Master Tracker CSV parser and importer
-  server/          Runs workflow commands in transactions; queries for screens
-  app/             Next.js pages
+  server/          Runs workflow commands in transactions; sign-in; settings;
+                   queries for screens; form checking
+  app/             Next.js pages: (manager)/ for the dashboard, turnovers and
+                   settings; login/
   components/      Shared UI (status and flag colours from the sheet)
-scripts/           npm run db:* commands
+scripts/           npm run db:* and admin:create commands
+tests/e2e/         Browser tests
 data/import/       Snapshot of your sheet used by the tests
 ```
 
@@ -185,5 +226,18 @@ They cover:
   skips, blocked, send-back, reassignment, booking, overdue and permissions;
 - the database layer on a real (embedded) Postgres: transactions,
   double-taps, conflicting edits;
+- sign-in sessions, passwords and lockout;
+- the dashboard's filters, the paste-a-list reader and the settings rules
+  (for example, the app always keeps one active manager);
 - the importer;
 - the demo data.
+
+```bash
+npm run test:e2e
+```
+
+These drive a real browser: signing in, the dashboard, creating a turnover
+and walking it through every step to Complete (including a block and a
+send-back), and pasting a list. They use their own server on port 3100 and
+their own database, so they don't touch your data. On a new computer, run
+`npx playwright install chromium` once first.
