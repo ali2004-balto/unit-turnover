@@ -6,6 +6,7 @@ import { isDateOnly } from "@/domain/dates";
 import { WorkflowError } from "@/domain/workflow/errors";
 import { requireManager } from "@/server/auth/current";
 import { getDb } from "@/server/db";
+import { sendQueuedMessages } from "@/server/notifications/after-response";
 import { createTurnover } from "@/server/workflow";
 
 export interface CreateState {
@@ -60,6 +61,7 @@ export async function createTurnoverAction(_previous: CreateState, form: FormDat
     if (error instanceof WorkflowError) return { error: error.message };
     throw error;
   }
+  await sendQueuedMessages();
   redirect(`/turnovers/${id}`);
 }
 
@@ -101,5 +103,6 @@ export async function bulkCreateAction(_previous: CreateState, form: FormData): 
     if (error instanceof WorkflowError) return { error: `Nothing was created: ${error.message}` };
     throw error;
   }
+  await sendQueuedMessages();
   redirect(`/?created=${rows.length}`);
 }

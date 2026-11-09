@@ -5,6 +5,7 @@ import { WorkflowError } from "@/domain/workflow/errors";
 import { requireManager } from "@/server/auth/current";
 import { getDb } from "@/server/db";
 import { commandFromForm } from "@/server/forms/command-form";
+import { sendQueuedMessages } from "@/server/notifications/after-response";
 import { runCommand } from "@/server/workflow";
 
 export interface CommandState {
@@ -32,6 +33,7 @@ export async function turnoverCommand(_previous: CommandState, form: FormData): 
     }
     throw error;
   }
+  await sendQueuedMessages();
   refresh();
   return { ok: true, at: Date.now() };
 }

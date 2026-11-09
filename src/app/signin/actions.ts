@@ -1,9 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { appBaseUrl, endTaskSession } from "@/server/auth/current";
-import { createAccessLink, linkUrl, redeemAccessLink, requestSignInLink } from "@/server/auth/links";
+import { endTaskSession } from "@/server/auth/current";
+import { redeemAccessLink, requestSignInLink } from "@/server/auth/links";
 import { getDb } from "@/server/db";
+import { sendQueuedMessages } from "@/server/notifications/after-response";
 
 export interface RequestState {
   sent?: boolean;
@@ -22,11 +23,8 @@ export async function requestLinkAction(_previous: RequestState, form: FormData)
   }
   if (!personId && !identifier) return { error: "Enter your mobile number or email." };
   const queued = await requestSignInLink(db, personId ? { personId } : { identifier });
-  if (queued && process.env.NODE_ENV !== "production") {
-    // Development only: no texts or emails go out yet, so print the link for testing.
-    const { token } = await createAccessLink(db, queued.personId, { purpose: "request" });
-    console.info(`[dev] Sign-in link for ${queued.name}: ${linkUrl(await appBaseUrl(), token)}`);
-  }
+  // In dry-run mode the message, link included, shows in the server log and the Outbox.
+  if (queued) await sendQueuedMessages();
   return { sent: true };
 }
 

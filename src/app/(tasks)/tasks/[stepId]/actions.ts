@@ -8,6 +8,7 @@ import { requireTaskUser } from "@/server/auth/current";
 import { getDb } from "@/server/db";
 import { deleteFinding, saveFinding } from "@/server/findings";
 import { commandFromForm } from "@/server/forms/command-form";
+import { sendQueuedMessages } from "@/server/notifications/after-response";
 import { runCommand } from "@/server/workflow";
 
 export interface TaskState {
@@ -46,6 +47,7 @@ export async function taskCommand(_previous: TaskState, form: FormData): Promise
   } catch (error) {
     return failure(error);
   }
+  await sendQueuedMessages();
   // Finishing or sending back hands the unit on, so the task leaves this person's list: show the list.
   if (parsed.command.type === "complete") redirect("/tasks?done=complete");
   if (parsed.command.type === "sendBack") redirect("/tasks?done=sentback");

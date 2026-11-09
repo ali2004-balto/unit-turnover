@@ -28,7 +28,7 @@ export const stepKind = pgEnum("step_kind", STEP_KINDS);
 export const checklistState = pgEnum("checklist_state", CHECKLIST_STATES);
 export const checklistSource = pgEnum("checklist_source", CHECKLIST_SOURCES);
 export const notifyChannel = pgEnum("notify_channel", ["sms", "email", "both", "none"]);
-export const notificationStatus = pgEnum("notification_status", ["pending", "sent", "failed", "skipped"]);
+export const notificationStatus = pgEnum("notification_status", ["pending", "sending", "sent", "failed", "skipped"]);
 
 const createdAt = () => timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
 const updatedAt = () => timestamp("updated_at", { withTimezone: true }).notNull().defaultNow();
@@ -47,7 +47,10 @@ export const appSettings = pgTable(
     /** No texts between these local times; they wait until morning. */
     quietHoursStart: text("quiet_hours_start").notNull().default("20:00"),
     quietHoursEnd: text("quiet_hours_end").notNull().default("07:00"),
+    /** Morning reminders and the managers' summary go out at this local time. */
     digestTime: text("digest_time").notNull().default("07:00"),
+    /** The last day the morning reminders were written, so they're written once a day. */
+    lastMorningRunOn: day("last_morning_run_on"),
     updatedAt: updatedAt(),
   },
   (t) => [check("app_settings_single_row", sql`${t.id} = 1`)],
@@ -262,6 +265,18 @@ export const events = pgTable(
  * Outbox of messages to send. Rows are written in the same transaction as
  * the change that causes them; a sender delivers them (Phase 4).
  */
+export interface Delivery {
+  status: "sent" | "failed";
+  at: string;
+  /** The phone number or email address it went to. */
+  to: string | null;
+  providerId?: string;
+  error?: string;
+  /** A failure that retrying won't fix, like a wrong number or missing keys. */
+  permanent?: boolean;
+}
+export type Deliveries = Partial<Record<"sms" | "email", Delivery>>;
+
 export const notifications = pgTable(
   "notifications",
   {
@@ -275,16 +290,24 @@ export const notifications = pgTable(
     data: jsonb("data").$type<Record<string, unknown>>().notNull().default({}),
     dedupeKey: text("dedupe_key"),
     status: notificationStatus("status").notNull().default("pending"),
+    /** How it went out: "sms", "email" or "sms,email". */
     channel: text("channel"),
     sendAfter: timestamp("send_after", { withTimezone: true }).notNull().defaultNow(),
+    /** Set while a sender is working on it; a send that crashed is retried after a while. */
+    claimedAt: ts("claimed_at"),
     attempts: integer("attempts").notNull().default(0),
     lastError: text("last_error"),
+    /** What each channel did: when it went, the provider's id, or the error. */
+    deliveries: jsonb("deliveries").$type<Deliveries>().notNull().default({}),
+    /** The words sent. Sign-in links are hidden once sent, except in dry-run mode. */
+    rendered: jsonb("rendered").$type<{ sms: string; subject: string; text: string }>(),
     sentAt: ts("sent_at"),
     createdAt: createdAt(),
   },
   (t) => [
     uniqueIndex("notifications_dedupe_unique").on(t.dedupeKey),
     index("notifications_pending").on(t.status, t.sendAfter),
+    index("notifications_created").on(t.createdAt),
   ],
 );
 
