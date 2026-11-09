@@ -1,26 +1,162 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens. Status and flag colours are taken from the conditional
+ * formatting in the Master Tracker sheet, so a status looks the same here as
+ * it did there. Dark mode follows the device unless the page sets
+ * class="light" or class="dark" on <html>.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f7f7f8;
+  --foreground: #16181d;
+  --card: #ffffff;
+  --muted: #f0f1f3;
+  --muted-foreground: #5f6673;
+  --border: #e3e5e9;
+  --primary: #1f4e78;
+  --primary-foreground: #ffffff;
+  --ring: #3b82c4;
+
+  /* Step statuses (sheet colours) */
+  --st-done-bg: #c6efce;
+  --st-done-fg: #006100;
+  --st-progress-bg: #ffeb9c;
+  --st-progress-fg: #9c5700;
+  --st-scheduled-bg: #ddebf7;
+  --st-scheduled-fg: #1f4e78;
+  --st-blocked-bg: #ffc7ce;
+  --st-blocked-fg: #9c0006;
+  --st-na-bg: #ededed;
+  --st-na-fg: #7f7f7f;
+  --st-todo-bg: transparent;
+  --st-todo-fg: #808080;
+
+  /* Flags (sheet colours) */
+  --fl-overdue-bg: #c00000;
+  --fl-overdue-fg: #ffffff;
+  --fl-ontrack-bg: #e2efda;
+  --fl-ontrack-fg: #375623;
+  --fl-notarget-bg: #f2f2f2;
+  --fl-notarget-fg: #7f7f7f;
+
+  --danger: #c00000;
+  --warning: #9c5700;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --background: #0f1115;
+    --foreground: #e8eaee;
+    --card: #171a20;
+    --muted: #1f232b;
+    --muted-foreground: #9aa1ad;
+    --border: #2a2f38;
+    --primary: #8cbbe8;
+    --primary-foreground: #0f1115;
+    --ring: #8cbbe8;
+
+    --st-done-bg: #173823;
+    --st-done-fg: #8fdc9c;
+    --st-progress-bg: #3b3012;
+    --st-progress-fg: #f2cd6a;
+    --st-scheduled-bg: #18293c;
+    --st-scheduled-fg: #9cc3ea;
+    --st-blocked-bg: #46181d;
+    --st-blocked-fg: #ff9aa5;
+    --st-na-bg: #262a31;
+    --st-na-fg: #9aa1ad;
+    --st-todo-fg: #8a909b;
+
+    --fl-overdue-bg: #c00000;
+    --fl-overdue-fg: #ffffff;
+    --fl-ontrack-bg: #1f2f1a;
+    --fl-ontrack-fg: #a9d78f;
+    --fl-notarget-bg: #22262d;
+    --fl-notarget-fg: #9aa1ad;
+
+    --danger: #ff6b6b;
+    --warning: #f2cd6a;
+  }
+}
+
+:root.dark {
+  --background: #0f1115;
+  --foreground: #e8eaee;
+  --card: #171a20;
+  --muted: #1f232b;
+  --muted-foreground: #9aa1ad;
+  --border: #2a2f38;
+  --primary: #8cbbe8;
+  --primary-foreground: #0f1115;
+  --ring: #8cbbe8;
+  --st-done-bg: #173823;
+  --st-done-fg: #8fdc9c;
+  --st-progress-bg: #3b3012;
+  --st-progress-fg: #f2cd6a;
+  --st-scheduled-bg: #18293c;
+  --st-scheduled-fg: #9cc3ea;
+  --st-blocked-bg: #46181d;
+  --st-blocked-fg: #ff9aa5;
+  --st-na-bg: #262a31;
+  --st-na-fg: #9aa1ad;
+  --st-todo-fg: #8a909b;
+  --fl-overdue-bg: #c00000;
+  --fl-overdue-fg: #ffffff;
+  --fl-ontrack-bg: #1f2f1a;
+  --fl-ontrack-fg: #a9d78f;
+  --fl-notarget-bg: #22262d;
+  --fl-notarget-fg: #9aa1ad;
+  --danger: #ff6b6b;
+  --warning: #f2cd6a;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-ring: var(--ring);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+
+  --color-st-done-bg: var(--st-done-bg);
+  --color-st-done-fg: var(--st-done-fg);
+  --color-st-progress-bg: var(--st-progress-bg);
+  --color-st-progress-fg: var(--st-progress-fg);
+  --color-st-scheduled-bg: var(--st-scheduled-bg);
+  --color-st-scheduled-fg: var(--st-scheduled-fg);
+  --color-st-blocked-bg: var(--st-blocked-bg);
+  --color-st-blocked-fg: var(--st-blocked-fg);
+  --color-st-na-bg: var(--st-na-bg);
+  --color-st-na-fg: var(--st-na-fg);
+  --color-st-todo-bg: var(--st-todo-bg);
+  --color-st-todo-fg: var(--st-todo-fg);
+  --color-fl-overdue-bg: var(--fl-overdue-bg);
+  --color-fl-overdue-fg: var(--fl-overdue-fg);
+  --color-fl-ontrack-bg: var(--fl-ontrack-bg);
+  --color-fl-ontrack-fg: var(--fl-ontrack-fg);
+  --color-fl-notarget-bg: var(--fl-notarget-bg);
+  --color-fl-notarget-fg: var(--fl-notarget-fg);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: light dark;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }

@@ -32,7 +32,11 @@ export type DatabaseConfig = { kind: "postgres"; url: string } | { kind: "pglite
 export function databaseConfig(env: NodeJS.ProcessEnv = process.env): DatabaseConfig {
   const url = env.DATABASE_URL?.trim();
   if (url) return { kind: "postgres", url };
-  return { kind: "pglite", dataDir: path.resolve(process.cwd(), env.PGLITE_DATA_DIR?.trim() || ".data/pglite") };
+  // Development only: production sets DATABASE_URL, so don't make the bundler trace this folder.
+  return {
+    kind: "pglite",
+    dataDir: path.resolve(/*turbopackIgnore: true*/ process.cwd(), env.PGLITE_DATA_DIR?.trim() || ".data/pglite"),
+  };
 }
 
 /** dataDir null = in memory (tests). */
