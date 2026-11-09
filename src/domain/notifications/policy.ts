@@ -2,8 +2,9 @@
  * Who hears about what, how, and when.
  *
  * - People on steps get messages the way they chose (text, email or both).
- * - Managers get email, except urgent things (a block, an escalation, a
- *   booking tomorrow that can't happen) which also go the way they chose.
+ * - Managers get email, except urgent things, which also go the way they
+ *   chose: a block, and a morning summary with something that needs them (a
+ *   booking that can't happen, or a step with no updates for too long).
  * - No texts during quiet hours (8 pm to 7 am by default): they wait for
  *   the morning. Emails go any time.
  */
@@ -22,14 +23,17 @@ export interface Recipient {
 
 export type ChannelChoice = { channels: Channel[] } | { skip: string };
 
-export function chooseChannels(person: Recipient, kind: string): ChannelChoice {
+/** `urgent`: a morning summary with something in it that needs a manager today. */
+export function chooseChannels(person: Recipient, kind: string, opts: { urgent?: boolean } = {}): ChannelChoice {
   if (!person.active) return { skip: "They're no longer active" };
   if (person.notifyChannel === "none") return { skip: "They chose not to get messages" };
   const preferred: Channel[] =
     person.notifyChannel === "both" ? ["sms", "email"] : person.notifyChannel === "email" ? ["email"] : ["sms"];
   const isManager = person.roles.includes("admin");
-  const wanted: Channel[] =
-    isManager && !URGENT_FOR_MANAGERS.has(kind) && kind !== "sign_in_link" ? ["email"] : preferred;
+  let wanted: Channel[];
+  if (!isManager || kind === "sign_in_link" || URGENT_FOR_MANAGERS.has(kind)) wanted = preferred;
+  else if (kind === "daily_digest" && opts.urgent && preferred.includes("sms")) wanted = ["sms", "email"];
+  else wanted = ["email"];
   const reachable = (c: Channel) => (c === "sms" ? person.phone !== null : person.email !== null);
   const channels = wanted.filter(reachable);
   if (channels.length > 0) return { channels };

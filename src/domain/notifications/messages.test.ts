@@ -70,7 +70,12 @@ describe("who hears how", () => {
     const manager = person({ roles: ["admin"], notifyChannel: "both" });
     expect(chooseChannels(manager, "send_back_alert")).toEqual({ channels: ["email"] });
     expect(chooseChannels(manager, "step_blocked")).toEqual({ channels: ["sms", "email"] });
-    expect(chooseChannels(manager, "escalation")).toEqual({ channels: ["sms", "email"] });
+    expect(chooseChannels(manager, "daily_digest")).toEqual({ channels: ["email"] });
+    expect(chooseChannels(manager, "daily_digest", { urgent: true })).toEqual({ channels: ["sms", "email"] });
+    // A manager who wants email only never gets the summary by text.
+    expect(chooseChannels({ ...manager, notifyChannel: "email" }, "daily_digest", { urgent: true })).toEqual({ channels: ["email"] });
+    // No email address: the summary falls back to a text.
+    expect(chooseChannels({ ...manager, email: null }, "daily_digest")).toEqual({ channels: ["sms"] });
   });
 
   it("uses whatever it can reach, and says why when it can't", () => {
