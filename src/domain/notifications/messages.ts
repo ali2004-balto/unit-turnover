@@ -192,14 +192,16 @@ function dailyDigest(d: Digest, link: string | null, appUrl: string | null): Ren
     if (rows.length > MAX_LINES) lines.push(`- and ${rows.length - MAX_LINES} more`);
   };
   const who = (name: string | null) => (name ? ` (${name})` : "");
+  // "3. In-house work" is the sheet's stage label; in a sentence the step's name reads better.
+  const stage = (label: string) => label.replace(/^\d+\.\s*/, "");
   section("Needs you", attention.map(attentionLine));
   section(
     "Blocked",
-    d.blocked.map((b) => `${b.unit}, ${b.stepName}${who(b.assigneeName)}: ${b.reason ?? "no reason given"}${b.since ? ` Since ${day(b.since)}.` : ""}`),
+    d.blocked.map((b) => `${b.unit}, ${b.stepName}${who(b.assigneeName)}${b.since ? `, since ${day(b.since)}` : ""}: ${b.reason ?? "no reason given"}`),
   );
   section("Nobody assigned", d.unassigned.map((u) => `${u.unit}, ${u.stepName}${u.since ? `, since ${day(u.since)}` : ""}`));
-  section("Past the target date", d.pastTarget.map((p) => `${p.unit}: target was ${day(p.target) ?? "not set"}, now at ${p.stage}`));
-  section("Due soon", d.dueSoon.map((p) => `${p.unit}: target ${day(p.target) ?? "not set"}, now at ${p.stage}`));
+  section("Past the target date", d.pastTarget.map((p) => `${p.unit}: target was ${day(p.target) ?? "not set"}, now at ${stage(p.stage)}`));
+  section("Due soon", d.dueSoon.map((p) => `${p.unit}: target ${day(p.target) ?? "not set"}, now at ${stage(p.stage)}`));
   section("No updates for a while", d.stalled.map((s) => `${s.unit}, ${s.stepName}${who(s.assigneeName)}: nothing since ${day(s.since)}`));
   section("Late tasks", d.lateTasks.map((l) => `${l.unit}, ${l.stepName}${who(l.assigneeName)}: was due ${day(l.dueOn)}`));
   section(

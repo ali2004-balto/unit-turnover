@@ -10,6 +10,7 @@ const SECTIONS = [
   { href: "/settings/people", label: "People" },
   { href: "/settings/defaults", label: "Default assignees" },
   { href: "/settings/templates", label: "Workflows" },
+  { href: "/settings/messages", label: "Messages" },
 ];
 
 function Nav({ pathname }: { pathname: string | null }) {

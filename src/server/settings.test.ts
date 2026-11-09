@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { people, propertyStepDefaults, workflowTemplates } from "@/db/schema";
+import { notifications, people, propertyStepDefaults, workflowTemplates } from "@/db/schema";
 import { getSettings } from "@/db/settings";
 import type { DraftStep } from "@/domain/workflow/template-rules";
 import { createTestDb, type TestDb } from "@/test/db";
@@ -11,6 +11,7 @@ import {
   normalizePhone,
   saveAppSettings,
   saveDefaults,
+  saveMessageSettings,
   savePerson,
   saveProperty,
   saveTemplate,
@@ -135,5 +136,23 @@ describe("workflow templates", () => {
     expect(rows.find((r) => r.id === copy)).toMatchObject({ name: "Copy of Standard turnover", isDefault: true });
     expect(rows.find((r) => r.id === t.templateId)).toMatchObject({ isDefault: false });
     expect((await loadTemplate(t.db, copy)).steps).toHaveLength(6);
+  });
+});
+
+describe("message timings", () => {
+  it("saves quiet hours and the morning time, and re-checks texts held for the old hours", async () => {
+    const later = new Date(Date.now() + 3_600_000);
+    const [held] = await t.db.insert(notifications).values({ recipientId: t.ids.crew, kind: "step_assigned", sendAfter: later }).returning();
+    await saveMessageSettings(t.db, { quietHoursStart: "21:30", quietHoursEnd: "06:45", digestTime: "06:30" });
+    expect(await getSettings(t.db)).toMatchObject({ quietHoursStart: "21:30", quietHoursEnd: "06:45", digestTime: "06:30" });
+    const [after] = await t.db.select().from(notifications).where(eq(notifications.id, held.id));
+    expect(after.sendAfter.getTime()).toBeLessThan(later.getTime());
+  });
+
+  it("only takes clock times", async () => {
+    await expect(saveMessageSettings(t.db, { quietHoursStart: "8pm", quietHoursEnd: "07:00", digestTime: "07:00" })).rejects.toThrow(
+      "Use a time like 07:00 for the quiet hours start.",
+    );
+    await expect(saveMessageSettings(t.db, { quietHoursStart: "20:00", quietHoursEnd: "07:00", digestTime: "24:00" })).rejects.toThrow(/morning messages/);
   });
 });

@@ -223,4 +223,13 @@ describe("morning messages", () => {
     expect(m.text).toContain("NO UPDATES FOR A WHILE\n- Acadian 203, Inspection (Inspector A): nothing since Mon Nov 2");
     expect(m.text).toContain("Open the dashboard: https://app.example.com/");
   });
+
+  it("words the summary's lists plainly", () => {
+    const blocked = new Scenario({ moveOutDate: "2026-10-20" }); // target Oct 30
+    blocked.run(inspector, { type: "block", stepId: blocked.step("inspection").id, reason: "No keys from the tenant" });
+    const [digest] = planMorning(morningOf("2026-11-03", [blocked])).filter((m) => m.kind === "daily_digest");
+    const { text } = renderMessage({ kind: "daily_digest", unit: null, stepName: null, data: digest.data, link: null });
+    expect(text).toContain("BLOCKED\n- Acadian 203, Inspection (Inspector A), since Mon Nov 2: No keys from the tenant\n");
+    expect(text).toContain("PAST THE TARGET DATE\n- Acadian 203: target was Fri Oct 30, now at Inspection\n");
+  });
 });

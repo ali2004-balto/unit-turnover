@@ -3,11 +3,12 @@
  * workflow templates. Every function checks its input; callers check that the
  * person is a manager.
  */
-import { and, arrayContains, asc, eq, ne, sql } from "drizzle-orm";
+import { and, arrayContains, asc, eq, gt, ne, sql } from "drizzle-orm";
 import type { Executor } from "@/db/client";
 import {
   appSettings,
   credentials,
+  notifications,
   people,
   properties,
   propertyStepDefaults,
@@ -58,6 +59,33 @@ export async function saveAppSettings(
     .insert(appSettings)
     .values({ ...DEFAULT_SETTINGS, ...input })
     .onConflictDoUpdate({ target: appSettings.id, set: { ...input, updatedAt: new Date() } });
+}
+
+const CLOCK_TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** When texts may go out, and when the morning reminders and summary are sent. */
+export async function saveMessageSettings(
+  ex: Executor,
+  input: { quietHoursStart: string; quietHoursEnd: string; digestTime: string },
+): Promise<void> {
+  const times = [
+    ["quiet hours start", input.quietHoursStart],
+    ["quiet hours end", input.quietHoursEnd],
+    ["morning messages", input.digestTime],
+  ] as const;
+  for (const [label, value] of times) {
+    if (!CLOCK_TIME.test(value)) fail(`Use a time like 07:00 for the ${label}.`);
+  }
+  const now = new Date();
+  await ex
+    .insert(appSettings)
+    .values({ ...DEFAULT_SETTINGS, ...input })
+    .onConflictDoUpdate({ target: appSettings.id, set: { ...input, updatedAt: now } });
+  // Texts held for the old quiet hours are checked again against the new ones.
+  await ex
+    .update(notifications)
+    .set({ sendAfter: now })
+    .where(and(eq(notifications.status, "pending"), gt(notifications.sendAfter, now)));
 }
 
 // ── Properties ──────────────────────────────────────────────────────────────

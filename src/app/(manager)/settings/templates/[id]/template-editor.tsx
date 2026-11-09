@@ -112,7 +112,11 @@ export function TemplateEditor({ templateId, name, steps }: { templateId: string
                   onChange={(e) => update(i, { dueDays: numberOrNull(e.target.value) })}
                 />
               </Field>
-              <Field label="Alert me after (days)" htmlFor={`${step.uid}-esc`}>
+              <Field
+                label="Alert me after (days)"
+                htmlFor={`${step.uid}-esc`}
+                hint="When nothing has happened on it for this many days, managers hear about it the next morning."
+              >
                 <Input
                   id={`${step.uid}-esc`}
                   type="number"
