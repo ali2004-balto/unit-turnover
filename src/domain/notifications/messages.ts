@@ -121,7 +121,17 @@ function dailyTasks(items: TaskReminder[], link: string | null): RenderedMessage
     ...late.map((i) => `Late: ${what(i)}`),
     ...missed.map((i) => `Not marked done: ${what(i)} (booked ${day(i.on)})`),
   ];
-  const sms = `Good morning. ${listWithin(parts, SMS_BUDGET - "Good morning. .".length - open.length)}.${open}`;
+  let sms = `Good morning. ${parts.join("; ")}.${open}`;
+  // A long list reads better as counts, with the details a tap away.
+  if (parts.length > 3 || sms.length > SMS_BUDGET) {
+    const counts = [
+      booked.length && `${booked.length} booked today`,
+      due.length && `${due.length} due today`,
+      late.length && `${late.length} late`,
+      missed.length && `${plural(missed.length, "booking")} to mark done or book again`,
+    ].filter(Boolean);
+    sms = `Good morning. You have ${items.length} things on your list: ${counts.join(", ")}.${open}`;
+  }
 
   const lines = ["Good morning. Here's your day:"];
   const section = (title: string, rows: string[]) => {

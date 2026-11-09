@@ -181,27 +181,31 @@ describe("morning messages", () => {
     expect(m.subject).toBe("Due today: Cleaning at Acadian 203");
   });
 
-  it("lists several things in one text, and one email", () => {
+  it("lists a few things in one text, and one email", () => {
     const items = [
       item({ type: "booking", unit: "Balwin 1", time: "10:00" }),
-      item({ type: "due", stepName: "In-house work" }),
       item({ type: "late", unit: "Arbor 12", stepName: "In-house work", dueOn: "2026-11-08" }),
       item({ type: "missed", unit: "WR 315", stepName: "Photos", on: "2026-11-08" }),
     ];
     const m = renderMessage({ kind: "daily_tasks", unit: null, stepName: null, data: { items }, link: LINK });
     expect(m.sms).toBe(
-      `Good morning. Booked today: Cleaning at Balwin 1 at 10:00; Due today: In-house work at Acadian 203; Late: In-house work at Arbor 12; Not marked done: Photos at WR 315 (booked Sun Nov 8). Open: ${LINK}`,
+      `Good morning. Booked today: Cleaning at Balwin 1 at 10:00; Late: In-house work at Arbor 12; Not marked done: Photos at WR 315 (booked Sun Nov 8). Open: ${LINK}`,
     );
-    expect(m.subject).toBe("Your tasks today (4)");
+    expect(m.subject).toBe("Your tasks today (3)");
     expect(m.text).toContain("Late\n- In-house work at Arbor 12 (was due Sun Nov 8)");
     expect(m.text).toContain(`Open your tasks: ${LINK}`);
   });
 
-  it("keeps a long list to about two text messages", () => {
-    const items = Array.from({ length: 12 }, (_, i) => item({ type: "due", unit: `Acadian ${100 + i}`, stepName: "In-house work" }));
+  it("counts a long list instead of spelling it out", () => {
+    const items = [
+      ...Array.from({ length: 6 }, (_, i) => item({ type: "missed", unit: `Balwin ${i + 1}`, on: "2026-11-08" })),
+      item({ type: "due", unit: "Grandview 302" }),
+      item({ type: "late", unit: "Oakwood 204", dueOn: "2026-11-07" }),
+    ];
     const m = renderMessage({ kind: "daily_tasks", unit: null, stepName: null, data: { items }, link: LINK });
-    expect(m.sms.length).toBeLessThanOrEqual(300);
-    expect(m.sms).toMatch(/; and \d+ more\. Open: /);
+    expect(m.sms).toBe(`Good morning. You have 8 things on your list: 1 due today, 1 late, 6 bookings to mark done or book again. Open: ${LINK}`);
+    // The email still lists every one.
+    expect(m.text.match(/^- /gm)).toHaveLength(8);
   });
 
   it("texts managers what needs them, with the summary by email", () => {
