@@ -141,6 +141,12 @@ test("people only ever see their own tasks", async ({ page: manager, browser }) 
   await expect(visible(cleaner).getByText("Rivergate 303")).toHaveCount(0);
   await cleaner.goto("/");
   await expect(cleaner).toHaveURL(/\/login/);
+
+  // The home-screen icon opens their tasks; a manager's opens the dashboard.
+  await cleaner.goto("/start");
+  await expect(cleaner).toHaveURL(/\/tasks$/);
+  await manager.goto("/start");
+  await expect(manager).toHaveURL(/\/$/);
 });
 
 test("broken and missing links explain what to do", async ({ page }) => {
