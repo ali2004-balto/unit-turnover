@@ -86,17 +86,29 @@ Preview environment a separate Supabase project.
 
 ## 4. Bring in the current sheet (optional)
 
-Until the spreadsheet upload screen arrives (Phase 5), importing the Master
-Tracker is a one-off command, run by someone with the code on their computer:
-
 1. In Google Sheets, open the Master Tracker tab: File → Download → Comma-separated values.
-2. With `DATABASE_URL` set to the Supabase connection string:
+2. In the app, **Settings → Google Sheet → Import from your sheet**: choose the
+   file and press **Check the file**. You see exactly what it would add, which
+   units are already in the app, and anything worth a look.
+3. Press **Import**. Nobody is sent a message. Units already in the app are
+   skipped, so it's safe to do again.
 
-   ```bash
-   DATABASE_URL="postgresql://…:6543/postgres" npm run db:import -- ~/Downloads/master-tracker.csv
-   ```
+Then add phone numbers for any new in-house employees it found in "Assigned to".
 
-Units already in the app are skipped, so it's safe to run again.
+### Keep your Google Sheet showing the tracker (optional)
+
+If people still like looking at the sheet, it can keep showing the Master
+Tracker from the app:
+
+1. In the app, **Settings → Google Sheet → Make a link**, and copy the formula.
+2. In your Google Sheet, add a tab (for example "From the app"), click cell A1
+   and paste the formula.
+
+Google Sheets fills the tab and refreshes it about once an hour, with the
+columns where they are on the Master Tracker tab, so the Summary tab's
+formulas can point at it. Make changes in the app, not in that tab. Anyone with
+the link can read the tracker, so keep it inside the sheet; **Make a new link**
+stops the old one at once.
 
 ## 5. Try it in dry-run mode
 

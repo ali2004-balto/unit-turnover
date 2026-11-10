@@ -6,12 +6,13 @@ Inspection → Scope of work → In-house work → Cleaning → Photos → Leasi
 upload. Each person sees only their own tasks, and finishing a step hands the
 unit to the next person automatically.
 
-**Status: Phase 4 of 5.** Managers run everything from the dashboard. The
-people who do each step (inspectors, crews, cleaners, photographers, leasing)
-get a text or email with a link when it's their turn, and work from their
-phones: their tasks, checklists, findings and photos. Morning reminders, a
-managers' summary and alerts for stalled steps go out each day. It's ready to
-deploy: see [Going live](docs/deploy.md).
+**Status: all five phases built.** Managers run everything from the
+dashboard. The people who do each step (inspectors, crews, cleaners,
+photographers, leasing) get a text or email with a link when it's their turn,
+and work from their phones: their tasks, checklists, findings and photos.
+Morning reminders, a managers' summary and alerts for stalled steps go out each
+day. Reports show where units wait, and your Google Sheet can keep showing the
+Master Tracker. It's ready to deploy: see [Going live](docs/deploy.md).
 
 | Phase | What it adds | State |
 | --- | --- | --- |
@@ -19,7 +20,7 @@ deploy: see [Going live](docs/deploy.md).
 | 2 | Manager login, dashboard (board and list), turnover page, create and bulk add, settings | Done |
 | 3 | Sign-in links, phone task screens, photos, inspection findings → draft scope | Done |
 | 4 | Text and email notifications, reminders, escalation, going live | Done |
-| 5 | Reports, Google Sheets export and sync, spreadsheet upload, polish | Next |
+| 5 | Reports, Google Sheets export and sync, spreadsheet upload, polish | Done |
 
 ## Run it on your computer
 
@@ -123,6 +124,40 @@ Each reminder goes out once, on the morning it first applies. Failed sends are
 retried after 1, 5, 15 and 60 minutes; a wrong number or missing setup isn't
 retried. Settings → Messages shows why anything didn't go, with **Send again**.
 
+### Reports and your Google Sheet (Phase 5)
+
+- **Reports** (`/reports`), for a period (last 30 or 90 days, 12 months, this
+  year, all time) and one property or all:
+  - how many turnovers finished, average days vacant, the share finished by
+    their target date, and the share sent back;
+  - **where units wait**: average days at each step, from when it became
+    someone's turn to done, with the slowest step picked out;
+  - days vacant and on-time, week by week or month by month;
+  - each property's days at each step, shaded, so its bottleneck stands out;
+  - each person's finished steps, how many met their due date, and how often
+    their work was sent back;
+  - send-backs: which step's work was redone, and where it was spotted;
+  - a **CSV** of the finished turnovers with their step times.
+
+  Step times come from the timeline, so steps finished in the sheet before the
+  app took over aren't guessed at.
+- **Settings → Google Sheet**:
+  - **Import from your sheet**: upload a CSV of the Master Tracker tab and see
+    exactly what it would add (and what's already in the app) before
+    importing. It only adds, and nobody is messaged.
+  - **Download** the Master Tracker as a CSV with your sheet's exact layout
+    (also on the Master Tracker page).
+  - **Keep a Google Sheet up to date**: make a private link and paste one
+    `=IMPORTDATA(...)` formula into a tab of your sheet. Google Sheets
+    refreshes it about once an hour, with the columns where they always were,
+    so a Summary tab's formulas keep working. Replace or turn off the link
+    there; it only works once the app is on the internet.
+- **First run**: until there's a turnover, the dashboard shows a short "Get
+  set up" list (add the team, choose who does each step, import the sheet…)
+  that ticks itself off.
+- **On a phone**, "Add to Home Screen" gives the app an icon: it opens the task
+  list for people on steps and the dashboard for managers.
+
 ### Managers
 
 Managers sign in with an email and password. Ten wrong passwords in a row lock
@@ -161,12 +196,17 @@ made-up dates and placeholder people (Manager, Inspector A, Crew A/B/C,
 Cleaner A, Photographer A, Leasing A). Three made-up Oakwood units show the
 situations your sheet doesn't have yet: a blocked step (Oakwood 101), in-house
 work skipped as N/A because the inspection found nothing (Oakwood 204), and a
-send-back from Photos to In-house work (Oakwood 310). Every demo change was
+send-back from Photos to In-house work (Oakwood 310). Another 24 made-up
+units finished over the last six months, so the reports have a history
+(hidden on the board unless you tick "Show completed"). Every demo change was
 played through the real workflow engine, so each unit has a full history.
 Dates are relative to the day the demo was loaded; `npm run db:reset` refreshes
 them.
 
 ### Importing your real sheet
+
+The easy way is in the app: **Settings → Google Sheet → Import from your
+sheet**. Or from the command line:
 
 1. In Google Sheets, open the **Master Tracker** tab.
 2. File → Download → Comma-separated values (.csv).
@@ -265,18 +305,22 @@ past their target date, which the sheet's flag hides.
 ```
 src/
   domain/          Pure logic, no database: dates, statuses, calculated columns,
-                   Summary tab, workflow engine and its rules, and what each
-                   message says, who gets it and when (notifications/)
+                   Summary tab, workflow engine and its rules, what each
+                   message says, who gets it and when (notifications/), and
+                   the reports (reports.ts)
   db/              Schema, migrations, database connection, settings, seed data
   import/          Master Tracker CSV parser and importer
   server/          Runs workflow commands in transactions; sign-in and links;
                    settings; findings; files and photos (local or Supabase);
                    the message sender and morning run (notifications/);
-                   first-time setup; queries for screens
-  app/             Next.js pages: (manager)/ for the dashboard, turnovers and
-                   settings; (tasks)/ for the phone task screens; login/,
-                   signin/, setup/ and l/ (sign-in links); api/files for
-                   photos; api/cron/tick for the scheduler
+                   first-time setup; queries for screens, the reports and the
+                   Master Tracker export
+  app/             Next.js pages: (manager)/ for the dashboard, turnovers,
+                   reports and settings; (tasks)/ for the phone task screens;
+                   login/, signin/, setup/ and l/ (sign-in links); api/files
+                   for photos; api/cron/tick for the scheduler; api/tracker,
+                   api/sheet and api/reports for downloads; the home-screen
+                   icon and manifest
   components/      Shared UI (status and flag colours from the sheet)
   instrumentation.ts  Checks for messages every minute during development
 scripts/           npm run db:* and admin:create commands
@@ -337,7 +381,14 @@ They cover:
 - the Twilio and Resend requests, and Supabase Storage (against a stand-in);
 - uploads straight to storage (only addresses given out for that step, only
   files that really arrived), and the streamed photo zip;
-- first-time setup (once only, needs the setup code).
+- first-time setup (once only, needs the setup code);
+- the reports: days vacant and on-time by the sheet's rules, step times from
+  the timeline (send-backs and N/A skips included), properties, people,
+  rework and the week or month trend;
+- the Master Tracker export: laid out exactly like your sheet's tab, and read
+  back by the importer unchanged; typed formulas can't run in a spreadsheet;
+  the live link only works with its current secret;
+- the import preview: exactly what importing would do, with nothing kept.
 
 ```bash
 npm run test:e2e
@@ -350,6 +401,9 @@ the inspector adds findings with a photo, the manager approves the scope,
 and the crew, cleaner, photographer (full-quality photo and a folder link)
 and leasing (zip download) each finish their step on their own phone, plus
 checks that people can't open each other's tasks. And that creating a
-turnover sends the inspector a text whose link opens the inspection. They use their own server on port 3100 and
+turnover sends the inspector a text whose link opens the inspection; that the
+sheet can be imported, downloaded and served to Google Sheets; and that every
+screen passes an accessibility check (axe, WCAG 2.2 AA) in light and dark
+mode, on a desktop and a phone. They use their own server on port 3100 and
 their own database, so they don't touch your data. On a new computer, run
 `npx playwright install chromium` once first.
