@@ -98,6 +98,12 @@ async function linkFor(db: DB, row: Row, person: Person, ctx: Context): Promise<
   return linkUrl(base, token);
 }
 
+/** Why a message went nowhere: the only way to reach them isn't set up yet. */
+const NOT_SET_UP: Record<Channel, string> = {
+  sms: "Texts aren't set up yet. Give them an email address in Settings, People, then retry.",
+  email: "Email isn't set up yet. Give them a phone number in Settings, People, then retry.",
+};
+
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error)).slice(0, 500);
 
 function failures(deliveries: Deliveries): string | null {
@@ -122,14 +128,16 @@ async function deliver(db: DB, row: Row, ctx: Context): Promise<Outcome> {
   if (person.isPlaceholder && ctx.provider.mode === "live") {
     return skip("Placeholder person: add their real phone or email in Settings, People.");
   }
-  const choice = chooseChannels(person, row.kind, { urgent: row.data.urgent === true });
+  const choice = chooseChannels(person, row.kind, { urgent: row.data.urgent === true, available: ctx.provider.channels });
   if ("skip" in choice) return skip(`${choice.skip}.`);
 
   const { timezone, quietHoursStart, quietHoursEnd: quietEnd } = ctx.settings;
   const deliveries: Deliveries = { ...row.deliveries };
   const todo = choice.channels.filter((c) => deliveries[c]?.status !== "sent" && !deliveries[c]?.permanent);
   const quiet = inQuietHours(ctx.now, timezone, quietHoursStart, quietEnd);
-  const sendNow = todo.filter((c) => !(c === "sms" && quiet));
+  const canSend = (c: Channel) => ctx.provider.channels.includes(c);
+  // Texts wait out quiet hours; one that can't be sent at all says so straight away.
+  const sendNow = todo.filter((c) => !(c === "sms" && quiet && canSend(c)));
   const holdingText = todo.length > sendNow.length;
 
   let rendered = row.rendered;
@@ -145,6 +153,10 @@ async function deliver(db: DB, row: Row, ctx: Context): Promise<Outcome> {
     for (const channel of sendNow) {
       const to = channel === "sms" ? person.phone! : person.email!;
       const at = ctx.now.toISOString();
+      if (!canSend(channel)) {
+        deliveries[channel] = { status: "failed", at, to, error: NOT_SET_UP[channel], permanent: true };
+        continue;
+      }
       try {
         const { id } =
           channel === "sms"

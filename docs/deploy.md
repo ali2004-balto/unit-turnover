@@ -142,6 +142,11 @@ Then set `NOTIFICATIONS_MODE` to `live` and redeploy. The "Messages: dry run"
 badge disappears from the top of the page. Send yourself a sign-in link from the
 sign-in page to check a text arrives.
 
+Email can go live before texts. Until the Twilio settings are in, people who
+chose texts get email instead, and Settings → People and Settings → Messages
+say so. Anyone with no email address can't be reached until texts are added:
+their messages show as failed in Messages, with what to fix.
+
 ## Day to day
 
 - **Someone didn't get a text?** Settings → Messages shows every message: when it
@@ -160,6 +165,6 @@ sign-in page to check a text arrives.
 | --- | --- |
 | The build stops with "DATABASE_URL isn't set" | Add it for the environment being built (Production or Preview). |
 | "Photo storage isn't set up yet" when adding photos | `SUPABASE_URL` or `SUPABASE_SERVICE_ROLE_KEY` is missing. Add it and redeploy. |
-| Messages show "Texts aren't set up" | Live mode is on but a Twilio setting is missing. Add it, redeploy, then **Send again**. |
+| Messages show "Texts aren't set up yet" | Texts aren't on, and that person has no email address. Give them one in Settings → People, then **Send again**. Or add the Twilio settings and redeploy. |
 | No morning reminders | Check `CRON_SECRET` is set. Vercel's project page, under Settings → Cron Jobs, shows each run. |
 | Links in texts point to a `vercel.app` address | Set `APP_URL` and redeploy. |

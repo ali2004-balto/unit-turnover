@@ -4,6 +4,7 @@ import { appSettings, notifications, people } from "@/db/schema";
 import { createTestDb, type TestDb } from "@/test/db";
 import { redeemAccessLink } from "../auth/links";
 import { createTurnover, runCommand } from "../workflow";
+import { retryNotification } from "./outbox";
 import { type MessageProvider, SendError } from "./providers";
 import { RETRY_MINUTES, sendDue } from "./sender";
 
@@ -28,10 +29,13 @@ afterEach(async () => {
 
 type Sent = { channel: "sms" | "email"; to: string; body: string; subject?: string };
 
-function fakeProvider(opts: { mode?: "dry-run" | "live"; failSms?: () => SendError; failEmail?: () => SendError } = {}) {
+function fakeProvider(
+  opts: { mode?: "dry-run" | "live"; channels?: Array<"sms" | "email">; failSms?: () => SendError; failEmail?: () => SendError } = {},
+) {
   const sent: Sent[] = [];
   const provider: MessageProvider = {
     mode: opts.mode ?? "dry-run",
+    channels: opts.channels ?? ["sms", "email"],
     async sendSms(m) {
       if (opts.failSms) throw opts.failSms();
       sent.push({ channel: "sms", to: m.to, body: m.body });
@@ -146,6 +150,32 @@ describe("sending", () => {
     expect(await sendDue(t.db, { provider, baseUrl: APP, now: MON_9AM })).toMatchObject({ skipped: 1 });
     expect(sent).toEqual([]);
     expect((await rows())[0]).toMatchObject({ status: "skipped", lastError: "No phone number or email." });
+  });
+
+  it("emails people who chose texts while texts aren't set up", async () => {
+    await t.db.update(people).set({ email: "inspector@example.com" }).where(eq(people.id, t.ids.inspector));
+    await newAcadian203();
+    const live = fakeProvider({ mode: "live", channels: ["email"] });
+    expect(await sendDue(t.db, { provider: live.provider, baseUrl: APP, now: MON_9AM })).toMatchObject({ sent: 1 });
+    expect(live.sent).toMatchObject([{ channel: "email", to: "inspector@example.com" }]);
+    expect((await rows())[0]).toMatchObject({ status: "sent", channel: "email" });
+  });
+
+  it("says what to fix when the only way to reach someone isn't set up, and sends on a retry once it is", async () => {
+    const tenPm = at("2026-11-10T06:00:00Z");
+    await newAcadian203(tenPm);
+    const live = fakeProvider({ mode: "live", channels: ["email"] });
+    // Not held for the morning: waiting wouldn't help.
+    expect(await sendDue(t.db, { provider: live.provider, baseUrl: APP, now: tenPm })).toMatchObject({ failed: 1 });
+    const [row] = await rows();
+    expect(row).toMatchObject({ status: "failed", lastError: "Text: Texts aren't set up yet. Give them an email address in Settings, People, then retry." });
+    expect(row.deliveries.sms).toMatchObject({ status: "failed", permanent: true });
+    expect(live.sent).toEqual([]);
+
+    await t.db.update(people).set({ email: "inspector@example.com" }).where(eq(people.id, t.ids.inspector));
+    await retryNotification(t.db, row.id, tenPm);
+    expect(await sendDue(t.db, { provider: live.provider, baseUrl: APP, now: tenPm })).toMatchObject({ sent: 1 });
+    expect(live.sent).toMatchObject([{ channel: "email", to: "inspector@example.com" }]);
   });
 
   it("never texts placeholder people for real", async () => {

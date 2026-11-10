@@ -50,7 +50,7 @@ async function TasksContent({ searchParams }: { searchParams: Promise<Record<str
       {active.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-card px-6 py-10 text-center">
           <p className="font-medium">You&apos;re all caught up</p>
-          <p className="mt-1 text-sm text-muted-foreground">You&apos;ll get a text when a unit is ready for you.</p>
+          <p className="mt-1 text-sm text-muted-foreground">You&apos;ll get a message when a unit is ready for you.</p>
         </div>
       ) : (
         <ul className="space-y-3">
@@ -126,7 +126,7 @@ function TaskCard({ task: t }: { task: TaskSummary }) {
             <OctagonAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden /> {t.blockedReason}
           </p>
         ) : null}
-        {upcoming ? <p className="mt-1 text-xs text-muted-foreground">You&apos;ll get a text when it&apos;s ready for you.</p> : null}
+        {upcoming ? <p className="mt-1 text-xs text-muted-foreground">You&apos;ll get a message when it&apos;s ready for you.</p> : null}
       </div>
       <ChevronRight className="size-5 shrink-0 text-muted-foreground" aria-hidden />
     </Link>

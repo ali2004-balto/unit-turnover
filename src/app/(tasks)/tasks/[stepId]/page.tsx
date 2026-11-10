@@ -125,7 +125,7 @@ async function TaskContent({ params }: { params: Promise<{ stepId: string }> }) 
 
       {!active ? (
         <p className="rounded-xl border border-dashed border-border bg-card p-4 text-sm text-muted-foreground">
-          You&apos;re booked for this. The steps before yours aren&apos;t finished yet; you&apos;ll get a text when the unit is ready for you.
+          You&apos;re booked for this. The steps before yours aren&apos;t finished yet; you&apos;ll get a message when the unit is ready for you.
         </p>
       ) : (
         <>

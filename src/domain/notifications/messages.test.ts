@@ -78,6 +78,16 @@ describe("who hears how", () => {
     expect(chooseChannels({ ...manager, email: null }, "daily_digest")).toEqual({ channels: ["sms"] });
   });
 
+  it("uses a way that's set up when the one they chose isn't", () => {
+    const emailOnly = { available: ["email"] as const };
+    expect(chooseChannels(person(), "step_assigned", emailOnly)).toEqual({ channels: ["email"] });
+    expect(chooseChannels(person({ notifyChannel: "both" }), "step_assigned", emailOnly)).toEqual({ channels: ["email"] });
+    expect(chooseChannels(person({ roles: ["admin"] }), "step_blocked", emailOnly)).toEqual({ channels: ["email"] });
+    // Nothing that's set up reaches them: it tries the way they chose, so the Outbox says what's missing.
+    expect(chooseChannels(person({ email: null }), "step_assigned", emailOnly)).toEqual({ channels: ["sms"] });
+    expect(chooseChannels(person({ phone: null }), "step_assigned", { available: [] })).toEqual({ channels: ["email"] });
+  });
+
   it("uses whatever it can reach, and says why when it can't", () => {
     expect(chooseChannels(person({ phone: null }), "step_assigned")).toEqual({ channels: ["email"] });
     expect(chooseChannels(person({ phone: null, email: null }), "step_assigned")).toEqual({ skip: "No phone number or email" });

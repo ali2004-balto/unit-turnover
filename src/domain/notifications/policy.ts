@@ -7,6 +7,7 @@
  *   booking that can't happen, or a step with no updates for too long).
  * - No texts during quiet hours (8 pm to 7 am by default): they wait for
  *   the morning. Emails go any time.
+ * - A way that isn't set up yet (texts, say) is replaced by one that is.
  */
 import type { Role } from "../workflow/types";
 import { URGENT_FOR_MANAGERS } from "./messages";
@@ -23,8 +24,16 @@ export interface Recipient {
 
 export type ChannelChoice = { channels: Channel[] } | { skip: string };
 
-/** `urgent`: a morning summary with something in it that needs a manager today. */
-export function chooseChannels(person: Recipient, kind: string, opts: { urgent?: boolean } = {}): ChannelChoice {
+export const CHANNELS: readonly Channel[] = ["sms", "email"];
+
+export interface ChannelOptions {
+  /** A morning summary with something in it that needs a manager today. */
+  urgent?: boolean;
+  /** The ways the app can send right now; texts can be added after email. Default: both. */
+  available?: readonly Channel[];
+}
+
+export function chooseChannels(person: Recipient, kind: string, opts: ChannelOptions = {}): ChannelChoice {
   if (!person.active) return { skip: "They're no longer active" };
   if (person.notifyChannel === "none") return { skip: "They chose not to get messages" };
   const preferred: Channel[] =
@@ -35,11 +44,18 @@ export function chooseChannels(person: Recipient, kind: string, opts: { urgent?:
   else if (kind === "daily_digest" && opts.urgent && preferred.includes("sms")) wanted = ["sms", "email"];
   else wanted = ["email"];
   const reachable = (c: Channel) => (c === "sms" ? person.phone !== null : person.email !== null);
-  const channels = wanted.filter(reachable);
+  const available = opts.available ?? CHANNELS;
+  const usable = (c: Channel) => reachable(c) && available.includes(c);
+  const channels = wanted.filter(usable);
   if (channels.length > 0) return { channels };
-  // Fall back to whatever we can reach.
-  const fallback = (["sms", "email"] as Channel[]).filter(reachable);
+  // Fall back to whatever reaches them: email while texts aren't set up, or a text when there's no email address.
+  const fallback = CHANNELS.filter(usable);
   if (fallback.length > 0) return { channels: [fallback[0]] };
+  // Nothing that's set up reaches them: try anyway, so the Outbox says what's missing and the message can be retried.
+  const unavailable = wanted.filter(reachable);
+  if (unavailable.length > 0) return { channels: unavailable };
+  const any = CHANNELS.filter(reachable);
+  if (any.length > 0) return { channels: [any[0]] };
   return { skip: "No phone number or email" };
 }
 

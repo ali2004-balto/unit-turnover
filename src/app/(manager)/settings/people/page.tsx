@@ -5,6 +5,7 @@ import { ROLE_LABELS } from "@/domain/workflow/types";
 import { cn } from "@/lib/utils";
 import { getCurrentSession } from "@/server/auth/current";
 import { getDb } from "@/server/db";
+import { notificationSetup } from "@/server/notifications/providers";
 import { Section } from "../section";
 import { SignInLinkButton } from "@/components/sign-in-link-button";
 import { PasswordDialog, PersonDialog, SignOutButton } from "./person-dialogs";
@@ -29,8 +30,18 @@ export default function PeoplePage() {
         ]);
         const hasPassword = new Set(withPassword.map((c) => c.id));
         const placeholders = rows.filter((p) => p.isPlaceholder && p.active).length;
+        const setup = notificationSetup();
+        const oneWayOnly =
+          setup.mode !== "live" || setup.sms === setup.email
+            ? null
+            : setup.email
+              ? "Texts aren't set up yet, so people who chose texts get email instead. Anyone without an email address won't hear from the app until texts are added."
+              : "Email isn't set up yet, so people who chose email get texts instead. Anyone without a phone number won't hear from the app until email is added.";
         return (
           <div className="space-y-3">
+            {oneWayOnly ? (
+              <p className="rounded-lg border border-border bg-st-progress-bg px-4 py-2.5 text-sm text-st-progress-fg">{oneWayOnly}</p>
+            ) : null}
             {placeholders > 0 ? (
               <p className="rounded-lg border border-border bg-st-progress-bg px-4 py-2.5 text-sm text-st-progress-fg">
                 {placeholders} placeholder {placeholders === 1 ? "person is" : "people are"} from the demo data. Rename them to your team, with real

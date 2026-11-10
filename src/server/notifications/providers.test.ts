@@ -68,6 +68,8 @@ describe("choosing the provider", () => {
   it("says what's missing when live keys aren't set", async () => {
     const live = providerFromEnv({ NOTIFICATIONS_MODE: "live", RESEND_API_KEY: "re_123", EMAIL_FROM: "turnover@example.com" });
     await expect(live.sendSms(TEXT)).rejects.toMatchObject({ permanent: true, message: expect.stringContaining("TWILIO_ACCOUNT_SID") });
+    expect(live.channels).toEqual(["email"]);
+    expect(providerFromEnv({}).channels).toEqual(["sms", "email"]);
     expect(notificationSetup({ NOTIFICATIONS_MODE: "live", RESEND_API_KEY: "re_123", EMAIL_FROM: "turnover@example.com" })).toEqual({
       mode: "live",
       sms: false,

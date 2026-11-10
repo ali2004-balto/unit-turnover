@@ -97,18 +97,26 @@ function ModeBanner({ setup }: { setup: ReturnType<typeof notificationSetup> }) 
       </div>
     );
   }
-  const missing = [!setup.sms && "texts (Twilio keys)", !setup.email && "email (Resend key)"].filter(Boolean);
+  const [title, detail, tone] =
+    setup.sms && setup.email
+      ? ["Live: messages are being sent.", "Texts go through Twilio and email through Resend.", "bg-st-done-bg text-st-done-fg"]
+      : setup.email
+        ? [
+            "Live: messages are being sent by email.",
+            "Texts aren't set up yet, so people who chose texts get email instead. Anyone without an email address can't be reached until texts are added (the Twilio keys).",
+            "bg-st-progress-bg text-st-progress-fg",
+          ]
+        : setup.sms
+          ? [
+              "Live: messages are being sent by text.",
+              "Email isn't set up yet, so people who chose email get texts instead. Anyone without a phone number can't be reached until email is added (the Resend key).",
+              "bg-st-progress-bg text-st-progress-fg",
+            ]
+          : ["Live, but nothing can be sent.", "Neither texts (the Twilio keys) nor email (the Resend key) is set up.", "bg-st-blocked-bg text-st-blocked-fg"];
   return (
-    <div
-      className={cn(
-        "rounded-lg border border-border px-4 py-3 text-sm",
-        missing.length ? "bg-st-blocked-bg text-st-blocked-fg" : "bg-st-done-bg text-st-done-fg",
-      )}
-    >
-      <p className="font-medium">Live: messages are being sent.</p>
-      <p className="mt-1">
-        {missing.length ? `Not set up yet: ${missing.join(" and ")}. Those messages fail until the keys are added.` : "Texts go through Twilio and email through Resend."}
-      </p>
+    <div className={cn("rounded-lg border border-border px-4 py-3 text-sm", tone)}>
+      <p className="font-medium">{title}</p>
+      <p className="mt-1">{detail}</p>
     </div>
   );
 }

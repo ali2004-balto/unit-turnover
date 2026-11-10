@@ -11,6 +11,7 @@
  * for another provider means changing one function here.
  */
 import { redactLinks } from "@/domain/notifications/messages";
+import { CHANNELS, type Channel } from "@/domain/notifications/policy";
 
 export interface OutgoingSms {
   to: string;
@@ -27,6 +28,8 @@ export interface OutgoingEmail {
 
 export interface MessageProvider {
   readonly mode: "dry-run" | "live";
+  /** The ways it can send. A dry run pretends both are set up. */
+  readonly channels: readonly Channel[];
   sendSms(message: OutgoingSms): Promise<{ id: string }>;
   sendEmail(message: OutgoingEmail): Promise<{ id: string }>;
 }
@@ -66,6 +69,7 @@ export function dryRunProvider(log: (line: string) => void = logLine): MessagePr
   const id = () => `dry-run-${Date.now().toString(36)}-${(count += 1)}`;
   return {
     mode: "dry-run",
+    channels: CHANNELS,
     async sendSms(m) {
       log(`[dry run] Text to ${m.to}: ${m.body}`);
       return { id: id() };
@@ -135,6 +139,7 @@ export function liveProvider(env: Env = process.env, fetchImpl: Fetch = fetch): 
   const email = env.RESEND_API_KEY && env.EMAIL_FROM ? resendEmail({ apiKey: env.RESEND_API_KEY, from: env.EMAIL_FROM.trim() }, fetchImpl) : null;
   return {
     mode: "live",
+    channels: CHANNELS.filter((c) => (c === "sms" ? sms : email) !== null),
     async sendSms(m) {
       if (!sms) throw new SendError("Texts aren't set up: add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM.", true);
       return sms(m);
