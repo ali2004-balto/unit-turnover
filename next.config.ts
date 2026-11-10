@@ -43,7 +43,7 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   poweredByHeader: false,
   // The embedded dev database ships WebAssembly files; load it with Node's own require.
-  serverExternalPackages: ["@electric-sql/pglite"],
+  serverExternalPackages: ["@electric-sql/pglite", "pg"],
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

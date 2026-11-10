@@ -63,13 +63,36 @@ export async function openPglite(dataDir: string | null): Promise<DbHandle> {
   };
 }
 
+/**
+ * Production talks to Postgres through Supabase's connection pooler, which
+ * lends a database connection for one query or transaction at a time. The
+ * pg driver suits it: each connection waits for one query's answer before
+ * sending the next, and it doesn't keep prepared statements. (postgres.js,
+ * used before, sends queries back to back on a busy connection; through the
+ * pooler, answers then reached the wrong query: pages hung, or failed on
+ * another query's rows.)
+ *
+ * - query_timeout: a query that gets no answer fails after a minute rather
+ *   than holding the page until the server gives up on it;
+ * - idleTimeoutMillis: connections unused for 20 seconds are closed, rather
+ *   than kept by a server that may be paused for a while.
+ */
+export const POOL_OPTIONS = { max: 5, idleTimeoutMillis: 20_000, connectionTimeoutMillis: 15_000, query_timeout: 60_000 } as const;
+
+/** Encrypted, with the server's certificate checked, except to a Postgres on this machine (or with sslmode=disable). */
+export function sslFor(url: string): boolean {
+  const { hostname, searchParams } = new URL(url);
+  return !(searchParams.get("sslmode") === "disable" || ["localhost", "127.0.0.1", "[::1]"].includes(hostname));
+}
+
 export async function openPostgres(url: string): Promise<DbHandle> {
-  const { default: postgres } = await import("postgres");
-  const { drizzle } = await import("drizzle-orm/postgres-js");
-  // prepare: false keeps it compatible with Supabase's connection pooler.
-  const client = postgres(url, { max: 5, prepare: false });
-  const db = drizzle(client, { schema }) as unknown as DB;
-  return { db, kind: "postgres", close: () => client.end() };
+  const { Pool } = await import("pg");
+  const { drizzle } = await import("drizzle-orm/node-postgres");
+  const pool = new Pool({ connectionString: url, ...POOL_OPTIONS, ssl: sslFor(url) });
+  // A connection that drops while unused (the pooler restarting, say) is replaced on next use; it mustn't crash the server.
+  pool.on("error", (error) => console.error("A database connection dropped:", error.message));
+  const db = drizzle(pool, { schema }) as unknown as DB;
+  return { db, kind: "postgres", close: () => pool.end() };
 }
 
 export async function openDatabase(config: DatabaseConfig = databaseConfig()): Promise<DbHandle> {
@@ -82,7 +105,7 @@ export async function migrateDatabase(handle: DbHandle): Promise<void> {
     const { migrate } = await import("drizzle-orm/pglite/migrator");
     await migrate(handle.db as never, { migrationsFolder: MIGRATIONS_FOLDER });
   } else {
-    const { migrate } = await import("drizzle-orm/postgres-js/migrator");
+    const { migrate } = await import("drizzle-orm/node-postgres/migrator");
     await migrate(handle.db as never, { migrationsFolder: MIGRATIONS_FOLDER });
   }
 }
