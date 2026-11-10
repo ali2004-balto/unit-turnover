@@ -19,7 +19,7 @@ export default function PeoplePage() {
     <Section
       title="People"
       path="/settings/people"
-      description="Everyone who works on turnovers. Managers sign in with a password; everyone else gets a sign-in link with each task."
+      description="Everyone who works on turnovers. Managers sign in with a password. Everyone else gets a link with each task, and once they've opened one, their phone stays signed in."
     >
       {async () => {
         const db = await getDb();

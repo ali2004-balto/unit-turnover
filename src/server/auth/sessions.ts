@@ -9,7 +9,13 @@ import { credentials, people, sessions } from "@/db/schema";
 import type { Role } from "@/domain/workflow/types";
 import { hashPassword, verifyPassword } from "./passwords";
 
-export const SESSION_DAYS = { password: 30, link: 30 } as const;
+/**
+ * How long a sign-in lasts from when it was last renewed. A phone signed in
+ * from a task link stays signed in for a year, renewed whenever it's used or
+ * another link is opened on it. Manager logins, which reach everything, last
+ * 30 days.
+ */
+export const SESSION_DAYS = { password: 30, link: 365 } as const;
 const DAY_MS = 86_400_000;
 /** Lock a manager account for 15 minutes after 10 wrong passwords in a row. */
 const MAX_FAILED_ATTEMPTS = 10;
@@ -82,6 +88,16 @@ export async function findSession(ex: Executor, token: string, now = new Date())
   }
   const { active: _active, ...person } = row.person;
   return { person, kind: row.kind, expiresAt: row.expiresAt };
+}
+
+/** Starts a session's full length again from now. Null if it no longer exists. */
+export async function renewSession(ex: Executor, token: string, now = new Date()): Promise<Date | null> {
+  const id = hashToken(token);
+  const [row] = await ex.select({ kind: sessions.kind }).from(sessions).where(eq(sessions.id, id));
+  if (!row) return null;
+  const expiresAt = new Date(now.getTime() + SESSION_DAYS[row.kind] * DAY_MS);
+  await ex.update(sessions).set({ lastSeenAt: now, expiresAt }).where(eq(sessions.id, id));
+  return expiresAt;
 }
 
 export async function deleteSession(ex: Executor, token: string): Promise<void> {

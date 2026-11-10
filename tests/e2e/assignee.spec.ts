@@ -72,6 +72,8 @@ test("a unit goes from inspection to Complete, each person working from their ow
   await expect(scope.getByText("Kitchen: Cracked floor tile by the fridge", { exact: true })).toBeVisible();
   await scope.getByRole("button", { name: /Approve scope/ }).click();
   await manager.locator("dialog[open]").getByRole("button", { name: "Approve" }).click();
+  // Wait for the approval to be saved before the next step reloads the page.
+  await expect(scope.getByRole("button", { name: /Approve scope/ })).toHaveCount(0);
 
   // Crew: ticks off the scope and finishes. They can't open the inspection.
   const crew = await openOnPhone(browser, await linkForStep(manager, "In-house work"));

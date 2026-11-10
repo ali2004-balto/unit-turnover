@@ -5,6 +5,10 @@
  * - A link is 128 random bits; only its hash is stored.
  * - It works for 7 days and can be used more than once in that time, so a
  *   message app's link preview can't use it up.
+ * - Opening one signs the phone in for a year (see openLink). On a phone
+ *   that's already signed in as its person, even an expired link opens the
+ *   task: the link travels in messages that can be forwarded, the sign-in
+ *   stays on the phone.
  * - It signs its person in to their own tasks only. Manager screens always
  *   need a password, even for a manager who opens a link.
  * - Revoking (Settings → People → Sign out) stops all of a person's links.
@@ -13,7 +17,7 @@ import { randomBytes } from "node:crypto";
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import type { Executor } from "@/db/client";
 import { accessLinks, notifications, people } from "@/db/schema";
-import { hashToken } from "./sessions";
+import { createSession, findSession, hashToken, renewSession } from "./sessions";
 
 export const LINK_DAYS = 7;
 const DAY_MS = 86_400_000;
@@ -45,7 +49,8 @@ export async function createAccessLink(
 
 export type LinkCheck =
   | { ok: true; personId: string; stepId: string | null }
-  | { ok: false; reason: "unknown" | "expired" | "revoked" | "inactive"; personId?: string };
+  | { ok: false; reason: "unknown" | "revoked" | "inactive"; personId?: string }
+  | { ok: false; reason: "expired"; personId: string; stepId: string | null };
 
 /** Checks a link and records its use. */
 export async function redeemAccessLink(ex: Executor, token: string, now = new Date()): Promise<LinkCheck> {
@@ -60,12 +65,42 @@ export async function redeemAccessLink(ex: Executor, token: string, now = new Da
   const { link } = row;
   if (link.revokedAt) return { ok: false, reason: "revoked", personId: link.personId };
   if (!row.active) return { ok: false, reason: "inactive" };
-  if (link.expiresAt <= now) return { ok: false, reason: "expired", personId: link.personId };
+  if (link.expiresAt <= now) return { ok: false, reason: "expired", personId: link.personId, stepId: link.stepId };
   await ex
     .update(accessLinks)
     .set({ lastUsedAt: now, useCount: sql`${accessLinks.useCount} + 1` })
     .where(eq(accessLinks.id, id));
   return { ok: true, personId: link.personId, stepId: link.stepId };
+}
+
+export type LinkOpening =
+  | { ok: true; personId: string; stepId: string | null; session: { token: string; expiresAt: Date } }
+  | { ok: false; reason: "unknown" | "expired" | "revoked" | "inactive" };
+
+/**
+ * Someone opened a sign-in link on a device. `deviceSession` is the task
+ * sign-in the device already has, if any. Signed in as the link's person, the
+ * device keeps that sign-in, renewed for another year, and the task opens even
+ * if the link has expired. Otherwise a working link signs the device in.
+ */
+export async function openLink(
+  ex: Executor,
+  token: string,
+  opts: { deviceSession?: string; now?: Date; userAgent?: string | null } = {},
+): Promise<LinkOpening> {
+  const now = opts.now ?? new Date();
+  const check = await redeemAccessLink(ex, token, now);
+  const target = check.ok || check.reason === "expired" ? { personId: check.personId, stepId: check.stepId } : null;
+  if (target && opts.deviceSession) {
+    const device = await findSession(ex, opts.deviceSession, now);
+    if (device?.kind === "link" && device.person.id === target.personId) {
+      const expiresAt = await renewSession(ex, opts.deviceSession, now);
+      if (expiresAt) return { ok: true, ...target, session: { token: opts.deviceSession, expiresAt } };
+    }
+  }
+  if (!check.ok) return { ok: false, reason: check.reason };
+  const session = await createSession(ex, check.personId, "link", { now, userAgent: opts.userAgent });
+  return { ok: true, personId: check.personId, stepId: check.stepId, session };
 }
 
 export async function revokeLinksFor(ex: Executor, personId: string, now = new Date()): Promise<void> {
