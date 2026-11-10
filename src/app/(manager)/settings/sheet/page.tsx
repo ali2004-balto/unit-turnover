@@ -2,10 +2,12 @@ import { Download } from "lucide-react";
 import type { Metadata } from "next";
 import { buttonVariants } from "@/components/ui/button";
 import { getSettings } from "@/db/settings";
+import { dateInZone } from "@/domain/dates";
 import { appBaseUrl } from "@/server/auth/current";
 import { getDb } from "@/server/db";
 import { sheetLinkUrl } from "@/server/queries/tracker-export";
 import { Section } from "../section";
+import { ImportForm } from "./import-form";
 import { CopyField, MakeLinkButton, TurnOffButton } from "./sheet-link";
 
 export const metadata: Metadata = { title: "Google Sheet" };
@@ -15,14 +17,23 @@ export default function SheetSettingsPage() {
     <Section
       title="Google Sheet"
       path="/settings/sheet"
-      description="Keep using your sheet: download the Master Tracker, or have a tab in your Google Sheet keep itself up to date from the app."
+      description="Bring your sheet's units into the app, download the Master Tracker, or have a tab in your Google Sheet keep itself up to date from the app."
     >
       {async () => {
-        const [{ sheetLinkToken }, base] = await Promise.all([getSettings(await getDb()), appBaseUrl()]);
+        const [{ sheetLinkToken, timezone }, base] = await Promise.all([getSettings(await getDb()), appBaseUrl()]);
         const url = sheetLinkToken ? sheetLinkUrl(base, sheetLinkToken) : null;
         const local = /^https?:\/\/(localhost|127\.|192\.168\.|10\.)/.test(base);
         return (
           <div className="max-w-3xl space-y-4">
+            <div className="rounded-lg border border-border bg-card p-5">
+              <h3 className="font-medium">Import from your sheet</h3>
+              <p className="mt-1 mb-4 text-sm text-muted-foreground">
+                Adds the units from your Master Tracker tab, with their statuses, dates, scope and notes. Units already in the app are left
+                alone, and nobody is sent a message.
+              </p>
+              <ImportForm today={dateInZone(new Date(), timezone)} />
+            </div>
+
             <div className="rounded-lg border border-border bg-card p-5">
               <h3 className="font-medium">Download</h3>
               <p className="mt-1 text-sm text-muted-foreground">

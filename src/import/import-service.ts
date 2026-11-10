@@ -28,6 +28,8 @@ export interface ImportOptions {
   exportedOn: DateOnly;
   /** Delete every existing turnover first. */
   replace?: boolean;
+  /** Work everything out, then undo it: for a preview that's exactly what importing would do. */
+  dryRun?: boolean;
   now?: Date;
 }
 
@@ -41,7 +43,23 @@ export interface ImportReport {
 
 const NOTE_LIMIT = 2000;
 
+/** Carries a dry run's report out of the transaction it rolls back. */
+class DryRun extends Error {
+  constructor(readonly report: ImportReport) {
+    super("Dry run");
+  }
+}
+
 export async function importMasterTracker(db: DB, parsed: ParseResult, opts: ImportOptions): Promise<ImportReport> {
+  try {
+    return await importInTransaction(db, parsed, opts);
+  } catch (error) {
+    if (error instanceof DryRun) return error.report;
+    throw error;
+  }
+}
+
+async function importInTransaction(db: DB, parsed: ParseResult, opts: ImportOptions): Promise<ImportReport> {
   return db.transaction(async (tx) => {
     const now = opts.now ?? new Date();
     const report: ImportReport = { created: 0, skipped: [], warnings: [...parsed.warnings], newProperties: [], newPeople: [] };
@@ -98,6 +116,7 @@ export async function importMasterTracker(db: DB, parsed: ParseResult, opts: Imp
       });
       report.created += 1;
     }
+    if (opts.dryRun) throw new DryRun(report);
     return report;
   });
 }

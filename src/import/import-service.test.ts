@@ -85,6 +85,19 @@ describe("importing your sheet into the database", () => {
     expect((await listTurnovers(handle.db)).rows).toHaveLength(17);
   });
 
+  it("previews an import exactly, without keeping any of it", async () => {
+    const preview = await importMasterTracker(handle.db, parseMasterTrackerCsv(csv), {
+      file: FILE,
+      exportedOn: "2026-11-09",
+      now: IMPORTED_AT,
+      dryRun: true,
+    });
+    expect(preview.created).toBe(17);
+    expect((await listTurnovers(handle.db)).rows).toHaveLength(0);
+    expect(await handle.db.select().from(events)).toEqual([]);
+    expect(await importSnapshot()).toEqual(preview);
+  });
+
   it("adds people named in 'Assigned to' as in-house employees", async () => {
     const withName = csv.replace("Junk removal; touch up paint,Not started,,", "Junk removal; touch up paint,Not started,,Sam");
     const report = await importMasterTracker(handle.db, parseMasterTrackerCsv(withName), {
