@@ -13,6 +13,7 @@ import type { ExtractTablesWithRelations } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { claimDatabase } from "./dev-lock";
 import * as schema from "./schema";
+import { SUPABASE_ROOT_CA } from "./supabase-ca";
 
 export type Schema = typeof schema;
 export type DB = PgDatabase<PgQueryResultHKT, Schema, ExtractTablesWithRelations<Schema>>;
@@ -77,16 +78,23 @@ export async function openPglite(dataDir: string | null): Promise<DbHandle> {
  * - idleTimeoutMillis: connections unused for 20 seconds are closed, rather
  *   than kept by a server that may be paused for a while.
  *
- * Encryption follows the address's sslmode, as with psql. Supabase signs its
- * certificate with its own authority, so checking it needs Supabase's CA
- * certificate (sslmode=verify-full with sslrootcert).
+ * The connection to Supabase is encrypted, and Supabase's certificate is
+ * checked against Supabase's own authority (see supabase-ca.ts). Elsewhere,
+ * encryption follows the address's sslmode, as with psql.
  */
 export const POOL_OPTIONS = { max: 5, idleTimeoutMillis: 20_000, connectionTimeoutMillis: 15_000, query_timeout: 60_000 } as const;
+
+/** TLS settings for a database address: Supabase's own authority for Supabase, otherwise whatever the address says. */
+export function sslFor(url: string): { ca: string } | undefined {
+  const { hostname, searchParams } = new URL(url);
+  if (searchParams.has("sslmode")) return undefined;
+  return /(^|\.)supabase\.(com|co)$/.test(hostname) ? { ca: SUPABASE_ROOT_CA } : undefined;
+}
 
 export async function openPostgres(url: string): Promise<DbHandle> {
   const { Pool } = await import("pg");
   const { drizzle } = await import("drizzle-orm/node-postgres");
-  const pool = new Pool({ connectionString: url, ...POOL_OPTIONS });
+  const pool = new Pool({ connectionString: url, ...POOL_OPTIONS, ssl: sslFor(url) });
   // A connection that drops while unused (the pooler restarting, say) is replaced on next use; it mustn't crash the server.
   pool.on("error", (error) => console.error("A database connection dropped:", error.message));
   const db = drizzle(pool, { schema }) as unknown as DB;

@@ -43,6 +43,7 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
+  // The underlying reason (a refused certificate, say) is in the cause.
+  console.error(error instanceof Error ? [error.message, error.cause instanceof Error ? error.cause.message : null].filter(Boolean).join("\nBecause: ") : error);
   process.exit(1);
 });
