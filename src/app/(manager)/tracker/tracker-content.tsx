@@ -240,7 +240,11 @@ function TrackerTable({
   const th = "border-b border-border px-2 py-2 text-left align-bottom text-xs font-medium whitespace-nowrap";
   const td = "border-b border-border px-2 py-1.5 align-top whitespace-nowrap";
   return (
-    <section aria-label="Unit turns" className="overflow-x-auto rounded-lg border border-border bg-card">
+    <section
+      aria-label="Unit turns"
+      tabIndex={0}
+      className="overflow-x-auto rounded-lg border border-border bg-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+    >
       <table className="min-w-max border-separate border-spacing-0 text-sm">
         <thead>
           <tr className="text-[11px] tracking-wide text-muted-foreground uppercase">
@@ -372,7 +376,7 @@ function StepCells({
           <>
             {STATUS_LABELS[step.status]}
             {step.status === "scheduled" && step.scheduledOn ? (
-              <span className="block text-[11px] font-normal opacity-80">{formatBooking(step.scheduledOn, step.scheduledTime)}</span>
+              <span className="block text-[11px] font-normal">{formatBooking(step.scheduledOn, step.scheduledTime)}</span>
             ) : null}
           </>
         ) : (

@@ -36,7 +36,7 @@ export function FlagPill({ flag, pastTarget, className }: { flag: Flag; pastTarg
   return (
     <span className={cn("inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs whitespace-nowrap", FLAG_STYLES[flag], className)}>
       {flag}
-      {pastTarget && flag !== "Overdue" ? <span className="font-normal opacity-80">· past target</span> : null}
+      {pastTarget && flag !== "Overdue" ? <span className="font-normal">· past target</span> : null}
     </span>
   );
 }

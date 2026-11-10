@@ -75,6 +75,15 @@ async function ReportContent({ searchParams }: { searchParams: Promise<Record<st
   );
 }
 
+/** A wide table that scrolls sideways on small screens; focusable so it can be scrolled from the keyboard. */
+function Scroll({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div role="region" aria-label={label} tabIndex={0} className="overflow-x-auto rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+      {children}
+    </div>
+  );
+}
+
 function Section({ title, description, children }: { title: string; description?: React.ReactNode; children: React.ReactNode }) {
   return (
     <section className="rounded-lg border border-border bg-card p-4 sm:p-5">
@@ -138,7 +147,7 @@ function StepTimes({ report }: { report: Report }) {
         </>
       }
     >
-      <div className="overflow-x-auto">
+      <Scroll label="Average days at each step">
         <table className="w-full text-sm sm:min-w-[34rem]">
           <thead className="text-left text-xs text-muted-foreground">
             <tr>
@@ -173,7 +182,7 @@ function StepTimes({ report }: { report: Report }) {
             ))}
           </tbody>
         </table>
-      </div>
+      </Scroll>
     </Section>
   );
 }
@@ -241,7 +250,7 @@ function ByProperty({ report }: { report: Report }) {
   const level = (v: number) => (max === 0 ? 1 : Math.min(5, Math.max(1, Math.ceil((v / max) * 5))));
   return (
     <Section title="By property" description="Average days at each step; darker is slower. Each property's slowest step is its bottleneck.">
-      <div className="overflow-x-auto">
+      <Scroll label="Days at each step by property">
         <table className="w-full min-w-[44rem] text-sm tabular-nums">
           <thead className="text-left text-xs text-muted-foreground">
             <tr>
@@ -285,7 +294,7 @@ function ByProperty({ report }: { report: Report }) {
             ))}
           </tbody>
         </table>
-      </div>
+      </Scroll>
       <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground" aria-hidden>
         <span>Fewer days</span>
         {[1, 2, 3, 4, 5].map((l) => (
@@ -303,7 +312,7 @@ function ByPerson({ report }: { report: Report }) {
       {report.byPerson.length === 0 ? (
         <p className="text-sm text-muted-foreground">No steps finished in this period.</p>
       ) : (
-        <div className="overflow-x-auto">
+        <Scroll label="Steps by person">
           <table className="w-full text-sm tabular-nums">
             <thead className="text-left text-xs text-muted-foreground">
               <tr>
@@ -326,7 +335,7 @@ function ByPerson({ report }: { report: Report }) {
               ))}
             </tbody>
           </table>
-        </div>
+        </Scroll>
       )}
     </Section>
   );
