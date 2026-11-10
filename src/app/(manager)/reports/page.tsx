@@ -249,7 +249,7 @@ function ByProperty({ report }: { report: Report }) {
   const max = Math.max(0, ...cells);
   const level = (v: number) => (max === 0 ? 1 : Math.min(5, Math.max(1, Math.ceil((v / max) * 5))));
   return (
-    <Section title="By property" description="Average days at each step; darker is slower. Each property's slowest step is its bottleneck.">
+    <Section title="By property" description="Average days at each step, shaded from fewer to more days (key below). Each property's slowest step is in bold.">
       <Scroll label="Days at each step by property">
         <table className="w-full min-w-[44rem] text-sm tabular-nums">
           <thead className="text-left text-xs text-muted-foreground">
