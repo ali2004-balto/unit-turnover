@@ -12,6 +12,7 @@ import { listTurnovers } from "@/server/queries/turnovers";
 import { loadTemplate } from "@/server/workflow";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { BoardView } from "./board-view";
+import { GettingStarted } from "./getting-started";
 import { Filters } from "./filters";
 import { KpiTiles } from "./kpi-tiles";
 import { ListView } from "./list-view";
@@ -42,6 +43,9 @@ export async function DashboardContent({ searchParams }: { searchParams: SearchP
   const filtered = Object.values(filters).some(Boolean);
 
   const created = typeof params.created === "string" ? Number(params.created) : 0;
+
+  // A brand-new install: numbers and filters mean nothing yet, so just the next steps.
+  if (dashboard.totalCards === 0) return <GettingStarted />;
 
   return (
     <div className="space-y-5">
@@ -78,14 +82,7 @@ export async function DashboardContent({ searchParams }: { searchParams: SearchP
         </div>
       </div>
 
-      {dashboard.totalCards === 0 ? (
-        <EmptyState title="No turnovers yet">
-          <Link href="/turnovers/new" className="font-medium text-primary hover:underline">
-            Create your first turnover
-          </Link>{" "}
-          or paste a list of units.
-        </EmptyState>
-      ) : dashboard.cards.length === 0 ? (
+      {dashboard.cards.length === 0 ? (
         <EmptyState title="Nothing matches these filters">
           <Link href={view === "list" ? "/?view=list" : "/"} className="font-medium text-primary hover:underline">
             Clear the filters
