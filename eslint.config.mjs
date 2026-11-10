@@ -24,7 +24,8 @@ const eslintConfig = defineConfig([
     // Generated migrations, local data and end-to-end test output
     "src/db/migrations/**",
     ".data/**",
-    ".next-e2e/**",
+    // Any other Next.js build folder (NEXT_DIST_DIR), such as the browser tests' .next-e2e
+    ".next*/**",
     "test-results/**",
     "playwright-report/**",
   ]),
