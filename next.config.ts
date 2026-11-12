@@ -45,11 +45,24 @@ const nextConfig: NextConfig = {
   // The embedded dev database ships WebAssembly files; load it with Node's own require.
   serverExternalPackages: ["@electric-sql/pglite", "pg"],
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // The TV board's link is its key: keep it out of caches, search engines and referrer headers.
+      {
+        source: "/tv/:path*",
+        headers: [
+          { key: "Cache-Control", value: "no-store" },
+          { key: "X-Robots-Tag", value: "noindex" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+        ],
+      },
+    ];
   },
   turbopack: {
     rules: {
       "*.css": {
+        // Plain CSS modules (the TV board's) skip Tailwind, which would turn them into global CSS.
+        condition: { not: { path: "*.module.css" } },
         loaders: ["@tailwindcss/turbopack"],
         as: "*.css",
       },

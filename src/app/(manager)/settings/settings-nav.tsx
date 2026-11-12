@@ -12,6 +12,7 @@ const SECTIONS = [
   { href: "/settings/templates", label: "Workflows" },
   { href: "/settings/messages", label: "Messages" },
   { href: "/settings/sheet", label: "Google Sheet" },
+  { href: "/settings/tv", label: "TV" },
 ];
 
 function Nav({ pathname }: { pathname: string | null }) {

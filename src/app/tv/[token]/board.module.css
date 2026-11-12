@@ -1,0 +1,306 @@
+/*
+ * Plain CSS for old TV browsers: hex colours, flexbox and grid, no
+ * Tailwind, oklch or color-mix. Sizes are in em and the board's font size
+ * follows the screen width (20px at 1920 wide), so it keeps its shape on a
+ * 1280x720 TV too. Nothing scrolls.
+ */
+.board {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  box-sizing: border-box;
+  padding: 1.2em 1.8em;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #0b0f17;
+  color: #f1f5f9;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 1.0417vw;
+  line-height: 1.2;
+}
+
+.board * {
+  box-sizing: border-box;
+}
+
+.header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.7em;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 2.2em;
+  font-weight: 700;
+}
+
+.asof {
+  font-size: 1.3em;
+  color: #94a3b8;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-gap: 0.8em;
+  flex: 0 0 auto;
+  margin-bottom: 0.8em;
+}
+
+.tile {
+  background: #151c2b;
+  border-radius: 0.5em;
+  padding: 0.6em 0.9em;
+}
+
+.value {
+  font-size: 2.6em;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.label {
+  margin-top: 0.15em;
+  font-size: 1em;
+  color: #94a3b8;
+}
+
+.warn {
+  color: #fbbf24;
+}
+
+.bad {
+  color: #f87171;
+}
+
+.main {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  grid-gap: 0.8em;
+  flex: 1 1 0;
+  min-height: 0;
+  margin-bottom: 0.8em;
+}
+
+.panel {
+  background: #121826;
+  border-radius: 0.5em;
+  padding: 0.8em 1em;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.panel h2 {
+  margin: 0 0 0.5em;
+  font-size: 1.3em;
+  font-weight: 700;
+  color: #cbd5e1;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.turnovers {
+  display: flex;
+  flex-direction: column;
+}
+
+.stages {
+  display: flex;
+  flex: 0 0 auto;
+  margin-bottom: 0.6em;
+}
+
+.stage {
+  flex: 1 1 0;
+  min-width: 0;
+  margin-right: 0.5em;
+  padding: 0.35em 0.5em;
+  background: #1b2436;
+  border-radius: 0.4em;
+}
+
+.stage:last-child {
+  margin-right: 0;
+}
+
+.count {
+  display: block;
+  font-size: 1.8em;
+  font-weight: 700;
+}
+
+.stageName {
+  display: block;
+  font-size: 0.8em;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-gap: 0.5em;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  align-content: start;
+}
+
+.card {
+  min-width: 0;
+  padding: 0.45em 0.7em;
+  background: #1b2436;
+  border-left: 0.35em solid #475569;
+  border-radius: 0.35em;
+  overflow: hidden;
+}
+
+.cardTitle {
+  font-size: 1.25em;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardStage {
+  font-size: 1em;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardMeta {
+  font-size: 0.9em;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.flag {
+  margin-top: 0.1em;
+  font-size: 0.9em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.sidePanel {
+  flex: 1 1 0;
+}
+
+.sidePanel + .sidePanel {
+  margin-top: 0.8em;
+}
+
+.row {
+  margin-bottom: 0.4em;
+  padding: 0.3em 0.7em;
+  background: #1b2436;
+  border-left: 0.35em solid #475569;
+  border-radius: 0.35em;
+  overflow: hidden;
+}
+
+.rowMain {
+  font-size: 1.15em;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rowSub {
+  font-size: 0.9em;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.more {
+  margin-top: 0.3em;
+  font-size: 1.1em;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.empty {
+  margin: 0;
+  font-size: 1.1em;
+  color: #64748b;
+}
+
+.footer {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-gap: 0.8em;
+  flex: 0 0 auto;
+}
+
+.quiet {
+  padding: 0.6em 1em;
+}
+
+.quiet h2 {
+  margin-bottom: 0.25em;
+}
+
+.quiet p {
+  margin: 0;
+  font-size: 1em;
+  color: #64748b;
+}
+
+/* Flag colours come last so they win over the card and row defaults. */
+.overdue {
+  border-left-color: #ef4444;
+}
+.overdue .flag {
+  color: #f87171;
+}
+
+.soon {
+  border-left-color: #f59e0b;
+}
+.soon .flag {
+  color: #fbbf24;
+}
+
+.blocked {
+  border-left-color: #c084fc;
+}
+.blocked .flag {
+  color: #d8b4fe;
+}
+
+.ok {
+  border-left-color: #34d399;
+}
+.ok .flag {
+  color: #6ee7b7;
+}
+
+.none {
+  border-left-color: #64748b;
+}
+.none .flag {
+  color: #94a3b8;
+}
