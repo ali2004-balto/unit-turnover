@@ -14,6 +14,8 @@ export const DEFAULT_SETTINGS: Omit<AppSettings, "updatedAt"> = {
   digestTime: "07:00",
   lastMorningRunOn: null,
   sheetLinkToken: null,
+  tvLinkToken: null,
+  tvLinkOwnerId: null,
 };
 
 export async function getSettings(ex: Executor): Promise<AppSettings> {

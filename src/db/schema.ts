@@ -56,6 +56,10 @@ export const appSettings = pgTable(
      * Kept as is so managers can copy the link again; null when it's turned off.
      */
     sheetLinkToken: text("sheet_link_token"),
+    /** The secret in the TV board's link (/tv/<token>); null when it's turned off. */
+    tvLinkToken: text("tv_link_token"),
+    /** The manager who made the TV link: "you" on the board. */
+    tvLinkOwnerId: uuid("tv_link_owner_id").references(() => people.id, { onDelete: "set null" }),
     updatedAt: updatedAt(),
   },
   (t) => [check("app_settings_single_row", sql`${t.id} = 1`)],
